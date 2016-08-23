@@ -7,28 +7,25 @@ A [Prometheus](https://prometheus.io/) exporter for Oracle modeled after the MyS
 
 The following metrics are exposed currently.
 
-* oracledb_exporter_last_scrape_duration_seconds
-* oracledb_exporter_last_scrape_error
-* oracledb_exporter_scrapes_total
-* oracledb_up
-
-* oracledb_activity_execute_count
-* oracledb_activity_parse_count_total
-* oracledb_activity_user_commits
-* oracledb_activity_user_rollbacks
-
-* oracledb_sessions_active
-* oracledb_sessions_inactive
-
-* oracledb_wait_time_application
-* oracledb_wait_time_commit
-* oracledb_wait_time_concurrency
-* oracledb_wait_time_configuration
-* oracledb_wait_time_network
-* oracledb_wait_time_other
-* oracledb_wait_time_scheduler
-* oracledb_wait_time_system_io
-* oracledb_wait_time_user_io
+- oracledb_exporter_last_scrape_duration_seconds
+- oracledb_exporter_last_scrape_error
+- oracledb_exporter_scrapes_total
+- oracledb_up
+- oracledb_activity_execute_count
+- oracledb_activity_parse_count_total
+- oracledb_activity_user_commits
+- oracledb_activity_user_rollbacks
+- oracledb_sessions_active
+- oracledb_sessions_inactive
+- oracledb_wait_time_application
+- oracledb_wait_time_commit
+- oracledb_wait_time_concurrency
+- oracledb_wait_time_configuration
+- oracledb_wait_time_network
+- oracledb_wait_time_other
+- oracledb_wait_time_scheduler
+- oracledb_wait_time_system_io
+- oracledb_wait_time_user_io
 
 
 ## Requirements
