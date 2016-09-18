@@ -176,7 +176,7 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 		activeCount,
 	)
 
-	err = db.QueryRow("SELECT COUNT(*) FROM v$session WHERE status = 'INACTVE'").Scan(&inactiveCount)
+	err = db.QueryRow("SELECT COUNT(*) FROM v$session WHERE status = 'INACTIVE'").Scan(&inactiveCount)
 	if err != nil {
 		return err
 	}
