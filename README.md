@@ -45,9 +45,18 @@ To build, you'll need the following packages installed.
 To run, you'll need the following packages installed.
 
 - Oracle Instant Client Package - Basic
-- Instant Client Package - SQL*Plus
 
-## Install
+
+## Docker
+
+You can run via Docker. If you don't already have an Oracle server, you can run one locally in a container and then link the exporter to it.
+
+```bash
+docker run --name oracle -d -p 8080:8080 -p 1521:1521 sath89/oracle-12c
+docker run -d --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@oracle/xe.oracle.docker iamseth/oracledb_exporter
+```
+
+## Manual Install
 
 Ensure requirements are met and configure oci8.pc file. See [Oracle driver](https://github.com/mattn/go-oci8) documentation for details. After then, it's just a go get to install.
 
