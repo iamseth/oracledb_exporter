@@ -9,17 +9,17 @@ ARCHIVE ?= $(BINARY)-$(VERSION).$(SUFFIX).tar.gz
 BINARY := oracledb_exporter-$(VERSION).$(SUFFIX)
 
 ./dist/$(BINARY):
-	mkdir -p ./dist
-	go build $(GOFLAGS) -o $@
+	@mkdir -p ./dist
+	@go build $(GOFLAGS) -o $@
 
 .PHONY: test
 test:
-	go test $$(go list ./... | grep -v /vendor/)
+	@go test $$(go list ./... | grep -v /vendor/)
 
 .PHONY: clean
 clean:
-	rm -rf ./dist
+	@rm -rf ./dist
 
 .PHONY: docker
 docker:
-	docker run --rm -v "$$PWD":/go/src/github.com/iamseth/oracledb_exporter -w /go/src/github.com/iamseth/oracledb_exporter golang:1.7 bash -c make
+	@docker build --build-arg VERSION=${VERSION} -t iamseth/oracledb_exporter:${VERSION} .
