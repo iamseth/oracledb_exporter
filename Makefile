@@ -22,6 +22,7 @@ deps:
 	@sudo ldconfig
 
 test:
+	@echo test
 	@PKG_CONFIG_PATH=${PWD} go test $$(go list ./... | grep -v /vendor/)
 
 clean:
@@ -31,7 +32,7 @@ docker:
 	@docker build -t "iamseth/oracledb_exporter:${VERSION}" .
 	@docker tag iamseth/oracledb_exporter:${VERSION} iamseth/oracledb_exporter:latest
 
-travis: clean test deps build docker
+travis: deps test build docker
 	@true
 
-.PHONY: build deps test clean docker
+.PHONY: build deps test clean docker travis
