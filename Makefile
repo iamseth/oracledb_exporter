@@ -10,7 +10,6 @@ build:
 	@PKG_CONFIG_PATH=${PWD} GOOS=linux go build $(GOFLAGS) -o ./dist/oracledb_exporter.linux-${GOARCH}
 	@PKG_CONFIG_PATH=${PWD} GOOS=darwin go build $(GOFLAGS) -o ./dist/oracledb_exporter.darwin-${GOARCH}
 
-# Target for Travis CI deps
 deps:
 	@sudo apt-get -qq update
 	@sudo apt-get install --no-install-recommends -qq libaio1 rpm
@@ -29,5 +28,8 @@ clean:
 docker:
 	@docker build -t "iamseth/oracledb_exporter:${VERSION}" .
 	@docker tag iamseth/oracledb_exporter:${VERSION} iamseth/oracledb_exporter:latest
+
+travis: clean test deps build docker
+	@true
 
 .PHONY: build deps test clean docker
