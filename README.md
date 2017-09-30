@@ -27,44 +27,24 @@ The following metrics are exposed currently.
 - oracledb_wait_time_system_io
 - oracledb_wait_time_user_io
 
-
-## Requirements
-
-All requirements may be downloaded from [Oracle](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html)
-
-### build
-
-To build, you'll need the following packages installed.
-
-- Oracle Instant Client Package - Basic
-- Instant Client Package - SQL*Plus
-- Instant Client Package - SDK
-
-### installation/running
-
-To run, you'll need the following packages installed.
-
-- Oracle Instant Client Package - Basic
-
+# Installation
 
 ## Docker
 
-You can run via Docker. If you don't already have an Oracle server, you can run one locally in a container and then link the exporter to it.
+You can run via Docker using an existing image. If you don't already have an Oracle server, you can run one locally in a container and then link the exporter to it.
 
 ```bash
 docker run --name oracle -d -p 8080:8080 -p 1521:1521 sath89/oracle-12c
 docker run -d --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@oracle/xe.oracle.docker iamseth/oracledb_exporter
 ```
 
-## Manual Install
+## Binary Release
 
-Ensure requirements are met and configure oci8.pc file. See [Oracle driver](https://github.com/mattn/go-oci8) documentation for details. After then, it's just a go get to install.
+Pre-compiled versions for Linux 64 bit and Mac OSX 64 bit can be found under [releases](https://github.com/iamseth/oracledb_exporter/releases).
 
-```bash
-go get -u github.com/iamseth/oracledb_exporter
-```
+In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html) for your operating system. Only the basic version is required for execution.
 
-## Running
+# Running the Binary
 
 Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting. For Example
 
@@ -72,6 +52,7 @@ Ensure that the environment variable DATA_SOURCE_NAME is set correctly before st
 export DATA_SOURCE_NAME=system/oracle@myhost
 /path/to/binary -l log.level error -l web.listen-address 9161
 ```
+
 ## Usage
 
 ```bash
@@ -86,6 +67,6 @@ Usage of oracledb_exporter:
        	Path under which to expose metrics. (default "/metrics")
 ```
 
-## Binary releases
+# Integration with Grafana
 
-Pre-compiled versions may be found in the [release section](https://github.com/iamseth/oracledb_exporter/releases).
+An example Grafana dashboard is available [here](https://grafana.com/dashboards/3333).
