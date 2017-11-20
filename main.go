@@ -145,6 +145,11 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		e.scrapeErrors.WithLabelValues("activity").Inc()
 	}
 
+	if err = ScrapeTablespace(db, ch); err != nil {
+		log.Errorln("Error scraping for tablespace:", err)
+		e.scrapeErrors.WithLabelValues("tablespace").Inc()
+  }
+
 	if err = ScrapeWaitTime(db, ch); err != nil {
 		log.Errorln("Error scraping for wait_time:", err)
 		e.scrapeErrors.WithLabelValues("wait_time").Inc()
@@ -244,6 +249,132 @@ func ScrapeActivity(db *sql.DB, ch chan<- prometheus.Metric) error {
 			prometheus.CounterValue,
 			value,
 		)
+	}
+	return nil
+}
+
+// ScrapeTablespace collects tablespace size.
+func ScrapeTablespace(db *sql.DB, ch chan<- prometheus.Metric) error {
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	rows, err = db.Query(`SELECT
+    a.tablespace_name         "Tablespace",
+    b.status                  "Status",
+    b.contents                "Type",
+    b.extent_management       "Extent Mgmt",
+    a.bytes                   bytes,
+    a.maxbytes                bytes_max,
+    c.bytes_free + NVL(d.bytes_expired,0)  bytes_free
+FROM
+  (
+    -- belegter und maximal verfuegbarer platz pro datafile
+    -- nach tablespacenamen zusammengefasst
+    -- => bytes
+    -- => maxbytes
+    SELECT
+        a.tablespace_name,
+        SUM(a.bytes)          bytes,
+        SUM(DECODE(a.autoextensible, 'YES', a.maxbytes, 'NO', a.bytes)) maxbytes
+    FROM
+        dba_data_files a
+    GROUP BY
+        tablespace_name
+  ) a,
+  sys.dba_tablespaces b,
+  (
+    -- freier platz pro tablespace
+    -- => bytes_free
+    SELECT
+        a.tablespace_name,
+        SUM(a.bytes) bytes_free
+    FROM
+        dba_free_space a
+    GROUP BY
+        tablespace_name
+  ) c,
+  (
+    -- freier platz durch expired extents
+    -- speziell fuer undo tablespaces
+    -- => bytes_expired
+    SELECT
+        a.tablespace_name,
+        SUM(a.bytes) bytes_expired
+    FROM
+        dba_undo_extents a
+    WHERE
+        status = 'EXPIRED'
+    GROUP BY
+        tablespace_name
+  ) d
+WHERE
+    a.tablespace_name = c.tablespace_name (+)
+    AND a.tablespace_name = b.tablespace_name
+    AND a.tablespace_name = d.tablespace_name (+)
+UNION ALL
+SELECT
+    d.tablespace_name "Tablespace",
+    b.status "Status",
+    b.contents "Type",
+    b.extent_management "Extent Mgmt",
+    sum(a.bytes_free + a.bytes_used) bytes,   -- allocated
+    SUM(DECODE(d.autoextensible, 'YES', d.maxbytes, 'NO', d.bytes)) bytes_max,
+    SUM(a.bytes_free + a.bytes_used - NVL(c.bytes_used, 0)) bytes_free
+FROM
+    sys.v_$TEMP_SPACE_HEADER a,
+    sys.dba_tablespaces b,
+    sys.v_$Temp_extent_pool c,
+    dba_temp_files d
+WHERE
+    c.file_id(+)             = a.file_id
+    and c.tablespace_name(+) = a.tablespace_name
+    and d.file_id            = a.file_id
+    and d.tablespace_name    = a.tablespace_name
+    and b.tablespace_name    = a.tablespace_name
+GROUP BY
+    b.status,
+    b.contents,
+    b.extent_management,
+    d.tablespace_name
+ORDER BY
+    1
+`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	tablespaceBytesDesc := prometheus.NewDesc(
+		"oracle_tablespace_bytes",
+		"Generic counter metric of tablespaces bytes in Oracle.",
+		[]string{"tablespace", "type"}, nil,
+	)
+	tablespaceMaxBytesDesc := prometheus.NewDesc(
+		"oracle_tablespace_max_bytes",
+		"Generic counter metric of tablespaces max bytes in Oracle.",
+		[]string{"tablespace", "type"}, nil,
+	)
+	tablespaceFreeBytesDesc := prometheus.NewDesc(
+		"oracle_tablespace_bytes_free",
+		"Generic counter metric of tablespaces free bytes in Oracle.",
+		[]string{"tablespace", "type"}, nil,
+	)
+
+	for rows.Next() {
+		var tablespace_name string
+		var status string
+		var contents string
+		var extent_management string
+		var bytes float64
+		var max_bytes float64
+		var bytes_free float64
+
+		if err := rows.Scan(&tablespace_name, &status, &contents, &extent_management, &bytes, &max_bytes, &bytes_free); err != nil {
+			return err
+		}
+		ch <- prometheus.MustNewConstMetric(tablespaceBytesDesc,     prometheus.GaugeValue, float64(bytes),      tablespace_name, contents)
+		ch <- prometheus.MustNewConstMetric(tablespaceMaxBytesDesc,  prometheus.GaugeValue, float64(max_bytes),  tablespace_name, contents)
+		ch <- prometheus.MustNewConstMetric(tablespaceFreeBytesDesc, prometheus.GaugeValue, float64(bytes_free), tablespace_name, contents)
 	}
 	return nil
 }
