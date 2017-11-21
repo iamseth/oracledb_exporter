@@ -345,17 +345,17 @@ ORDER BY
 	}
 	defer rows.Close()
 	tablespaceBytesDesc := prometheus.NewDesc(
-		"oracle_tablespace_bytes",
+		prometheus.BuildFQName(namespace, "tablespace", "bytes"),
 		"Generic counter metric of tablespaces bytes in Oracle.",
 		[]string{"tablespace", "type"}, nil,
 	)
 	tablespaceMaxBytesDesc := prometheus.NewDesc(
-		"oracle_tablespace_max_bytes",
+		prometheus.BuildFQName(namespace, "tablespace", "max_bytes"),
 		"Generic counter metric of tablespaces max bytes in Oracle.",
 		[]string{"tablespace", "type"}, nil,
 	)
 	tablespaceFreeBytesDesc := prometheus.NewDesc(
-		"oracle_tablespace_bytes_free",
+		prometheus.BuildFQName(namespace, "tablespace", "free"),
 		"Generic counter metric of tablespaces free bytes in Oracle.",
 		[]string{"tablespace", "type"}, nil,
 	)
