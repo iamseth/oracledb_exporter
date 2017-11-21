@@ -27,9 +27,9 @@ The following metrics are exposed currently.
 - oracledb_wait_time_scheduler
 - oracledb_wait_time_system_io
 - oracledb_wait_time_user_io
-- oracle_tablespace_bytes
-- oracle_tablespace_max_bytes
-- oracle_tablespace_bytes_free
+- oracledb_tablespace_bytes
+- oracledb_tablespace_max_bytes
+- oracledb_tablespace_bytes_free
 
 # Installation
 
