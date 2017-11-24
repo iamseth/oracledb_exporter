@@ -1,0 +1,5 @@
+user="system"
+pass="temppasswd"
+host="demora1"
+port="1521"
+service="DOCKER"
