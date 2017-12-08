@@ -38,8 +38,9 @@ The following metrics are exposed currently.
 You can run via Docker using an existing image. If you don't already have an Oracle server, you can run one locally in a container and then link the exporter to it.
 
 ```bash
-docker run --name oracle -d -p 8080:8080 -p 1521:1521 sath89/oracle-12c
-docker run -d --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@oracle/xe.oracle.docker iamseth/oracledb_exporter
+docker run -d --name oracle -p 1521:1521 wnameless/oracle-xe-11g:16.04
+docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@oracle/xe iamseth/oracledb_exporter
+
 ```
 
 ## Binary Release
