@@ -1,0 +1,4 @@
+# Use a string to define connection with a port
+string="system/temppasswd@demora2:1522/MONO12C"
+# You can change displayed value for whatever you want
+name="DEMO2"
