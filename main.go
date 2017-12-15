@@ -259,86 +259,79 @@ func ScrapeTablespace(db *sql.DB, ch chan<- prometheus.Metric) error {
 		rows *sql.Rows
 		err  error
 	)
-	rows, err = db.Query(`SELECT
-    a.tablespace_name         "Tablespace",
-    b.status                  "Status",
-    b.contents                "Type",
-    b.extent_management       "Extent Mgmt",
-    a.bytes                   bytes,
-    a.maxbytes                bytes_max,
-    c.bytes_free + NVL(d.bytes_expired,0)  bytes_free
-FROM
-  (
-    -- belegter und maximal verfuegbarer platz pro datafile
-    -- nach tablespacenamen zusammengefasst
-    -- => bytes
-    -- => maxbytes
-    SELECT
-        a.tablespace_name,
-        SUM(a.bytes)          bytes,
-        SUM(DECODE(a.autoextensible, 'YES', a.maxbytes, 'NO', a.bytes)) maxbytes
-    FROM
-        dba_data_files a
-    GROUP BY
-        tablespace_name
-  ) a,
-  sys.dba_tablespaces b,
-  (
-    -- freier platz pro tablespace
-    -- => bytes_free
-    SELECT
-        a.tablespace_name,
-        SUM(a.bytes) bytes_free
-    FROM
-        dba_free_space a
-    GROUP BY
-        tablespace_name
-  ) c,
-  (
-    -- freier platz durch expired extents
-    -- speziell fuer undo tablespaces
-    -- => bytes_expired
-    SELECT
-        a.tablespace_name,
-        SUM(a.bytes) bytes_expired
-    FROM
-        dba_undo_extents a
-    WHERE
-        status = 'EXPIRED'
-    GROUP BY
-        tablespace_name
-  ) d
-WHERE
-    a.tablespace_name = c.tablespace_name (+)
-    AND a.tablespace_name = b.tablespace_name
-    AND a.tablespace_name = d.tablespace_name (+)
-UNION ALL
+	rows, err = db.Query(`
 SELECT
-    d.tablespace_name "Tablespace",
-    b.status "Status",
-    b.contents "Type",
-    b.extent_management "Extent Mgmt",
-    sum(a.bytes_free + a.bytes_used) bytes,   -- allocated
-    SUM(DECODE(d.autoextensible, 'YES', d.maxbytes, 'NO', d.bytes)) bytes_max,
-    SUM(a.bytes_free + a.bytes_used - NVL(c.bytes_used, 0)) bytes_free
+  Z.name,
+  dt.status,
+  dt.contents,
+  dt.extent_management,
+  Z.bytes,
+  Z.max_bytes,
+  Z.free_bytes
 FROM
-    sys.v_$TEMP_SPACE_HEADER a,
-    sys.dba_tablespaces b,
-    sys.v_$Temp_extent_pool c,
-    dba_temp_files d
+(
+  SELECT
+    X.name                   as name,
+    SUM(nvl(X.free_bytes,0)) as free_bytes,
+    SUM(X.bytes)             as bytes,
+    SUM(X.max_bytes)         as max_bytes
+  FROM
+    (
+      SELECT
+        ddf.tablespace_name as name,
+        ddf.status as status,
+        ddf.bytes as bytes,
+        sum(dfs.bytes) as free_bytes,
+        CASE
+          WHEN ddf.maxbytes = 0 THEN ddf.bytes
+          ELSE ddf.maxbytes
+        END as max_bytes
+      FROM
+        sys.dba_data_files ddf,
+        sys.dba_tablespaces dt,
+        sys.dba_free_space dfs
+      WHERE ddf.tablespace_name = dt.tablespace_name
+      AND ddf.file_id = dfs.file_id(+)
+      GROUP BY
+        ddf.tablespace_name,
+        ddf.file_name,
+        ddf.status,
+        ddf.bytes,
+        ddf.maxbytes
+    ) X
+  GROUP BY X.name
+  UNION ALL
+  SELECT
+    Y.name                   as name,
+    MAX(nvl(Y.free_bytes,0)) as free_bytes,
+    SUM(Y.bytes)             as bytes,
+    SUM(Y.max_bytes)         as max_bytes
+  FROM
+    (
+      SELECT
+        dtf.tablespace_name as name,
+        dtf.status as status,
+        dtf.bytes as bytes,
+        (
+          SELECT
+            ((f.total_blocks - s.tot_used_blocks)*vp.value)
+          FROM
+            (SELECT tablespace_name, sum(used_blocks) tot_used_blocks FROM gv$sort_segment WHERE  tablespace_name!='DUMMY' GROUP BY tablespace_name) s,
+            (SELECT tablespace_name, sum(blocks) total_blocks FROM dba_temp_files where tablespace_name !='DUMMY' GROUP BY tablespace_name) f,
+            (SELECT value FROM v$parameter WHERE name = 'db_block_size') vp
+          WHERE f.tablespace_name=s.tablespace_name AND f.tablespace_name = dtf.tablespace_name
+        ) as free_bytes,
+        CASE
+          WHEN dtf.maxbytes = 0 THEN dtf.bytes
+          ELSE dtf.maxbytes
+        END as max_bytes
+      FROM
+        sys.dba_temp_files dtf
+    ) Y
+  GROUP BY Y.name
+) Z, sys.dba_tablespaces dt
 WHERE
-    c.file_id(+)             = a.file_id
-    and c.tablespace_name(+) = a.tablespace_name
-    and d.file_id            = a.file_id
-    and d.tablespace_name    = a.tablespace_name
-    and b.tablespace_name    = a.tablespace_name
-GROUP BY
-    b.status,
-    b.contents,
-    b.extent_management,
-    d.tablespace_name
-ORDER BY
-    1
+  Z.name = dt.tablespace_name
 `)
 	if err != nil {
 		return err
