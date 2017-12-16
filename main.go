@@ -148,16 +148,11 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	if err = ScrapeTablespace(db, ch); err != nil {
 		log.Errorln("Error scraping for tablespace:", err)
 		e.scrapeErrors.WithLabelValues("tablespace").Inc()
-  }
+	}
 
 	if err = ScrapeWaitTime(db, ch); err != nil {
 		log.Errorln("Error scraping for wait_time:", err)
 		e.scrapeErrors.WithLabelValues("wait_time").Inc()
-	}
-
-	if err = DeprecatedScrapeSessions(db, ch); err != nil {
-		log.Errorln("Error scraping for sessions:", err)
-		e.scrapeErrors.WithLabelValues("sessions").Inc()
 	}
 
 	if err = ScrapeSessions(db, ch); err != nil {
@@ -168,46 +163,11 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 }
 
 // ScrapeSessions collects session metrics from the v$session view.
-// DEPRECATED
-func DeprecatedScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
-	var err error
-	var activeCount float64
-	var inactiveCount float64
-
-	// There is probably a better way to do this with a single query. #FIXME when I figure that out.
-	err = db.QueryRow("SELECT COUNT(*) FROM v$session WHERE status = 'ACTIVE'").Scan(&activeCount)
-	if err != nil {
-		return err
-	}
-
-	ch <- prometheus.MustNewConstMetric(
-		prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "active"),
-			"Gauge metric with count of sessions marked ACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='ACTIVE}) instead.", []string{}, nil),
-		prometheus.GaugeValue,
-		activeCount,
-	)
-
-	err = db.QueryRow("SELECT COUNT(*) FROM v$session WHERE status = 'INACTIVE'").Scan(&inactiveCount)
-	if err != nil {
-		return err
-	}
-
-	ch <- prometheus.MustNewConstMetric(
-		prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "inactive"),
-			"Gauge metric with count of sessions marked INACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='INACTIVE'}) instead.", []string{}, nil),
-		prometheus.GaugeValue,
-		inactiveCount,
-	)
-
-	return nil
-}
-
-// ScrapeSessions collects session metrics from the v$session view.
 func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 	var (
-			rows *sql.Rows
-			err error
-  )
+		rows *sql.Rows
+		err  error
+	)
 	// Retrieve status and type for all sessions.
 	rows, err = db.Query("SELECT status, type, COUNT(*) FROM v$session GROUP BY status, type")
 	if err != nil {
@@ -217,9 +177,9 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			status string
+			status      string
 			sessionType string
-			count float64
+			count       float64
 		)
 		if err := rows.Scan(&status, &sessionType, &count); err != nil {
 			return err
@@ -232,7 +192,27 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 			status,
 			sessionType,
 		)
-  }
+
+		// These metrics are deprecated though so as to not break existing monitoring straight away, are included for the next few releases.
+		if status == "ACTIVE" {
+			ch <- prometheus.MustNewConstMetric(
+				prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "active"),
+					"Gauge metric with count of sessions marked ACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='ACTIVE}) instead.", []string{}, nil),
+				prometheus.GaugeValue,
+				count,
+			)
+		}
+
+		if status == "INACTIVE" {
+			ch <- prometheus.MustNewConstMetric(
+				prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "inactive"),
+					"Gauge metric with count of sessions marked INACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='INACTIVE'}) instead.", []string{}, nil),
+				prometheus.GaugeValue,
+				count,
+			)
+		}
+
+	}
 	return nil
 }
 
@@ -405,8 +385,8 @@ WHERE
 		if err := rows.Scan(&tablespace_name, &status, &contents, &extent_management, &bytes, &max_bytes, &bytes_free); err != nil {
 			return err
 		}
-		ch <- prometheus.MustNewConstMetric(tablespaceBytesDesc,     prometheus.GaugeValue, float64(bytes),      tablespace_name, contents)
-		ch <- prometheus.MustNewConstMetric(tablespaceMaxBytesDesc,  prometheus.GaugeValue, float64(max_bytes),  tablespace_name, contents)
+		ch <- prometheus.MustNewConstMetric(tablespaceBytesDesc, prometheus.GaugeValue, float64(bytes), tablespace_name, contents)
+		ch <- prometheus.MustNewConstMetric(tablespaceMaxBytesDesc, prometheus.GaugeValue, float64(max_bytes), tablespace_name, contents)
 		ch <- prometheus.MustNewConstMetric(tablespaceFreeBytesDesc, prometheus.GaugeValue, float64(bytes_free), tablespace_name, contents)
 	}
 	return nil
