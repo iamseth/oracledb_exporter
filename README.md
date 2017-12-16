@@ -16,8 +16,9 @@ The following metrics are exposed currently.
 - oracledb_activity_parse_count_total
 - oracledb_activity_user_commits
 - oracledb_activity_user_rollbacks
-- oracledb_sessions_active
-- oracledb_sessions_inactive
+- oracledb_sessions_activity
+- oracledb_sessions_active (deprecated. Use ``sum(oracledb_sessions_activity{status='ACTIVE'})`` instead.)
+- oracledb_sessions_inactive (deprecated. Use ``sum(oracledb_sessions_activity{status='INACTIVE'})`` instead.)
 - oracledb_wait_time_application
 - oracledb_wait_time_commit
 - oracledb_wait_time_concurrency

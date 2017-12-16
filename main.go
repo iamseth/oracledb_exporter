@@ -155,6 +155,11 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		e.scrapeErrors.WithLabelValues("wait_time").Inc()
 	}
 
+	if err = DeprecatedScrapeSessions(db, ch); err != nil {
+		log.Errorln("Error scraping for sessions:", err)
+		e.scrapeErrors.WithLabelValues("sessions").Inc()
+	}
+
 	if err = ScrapeSessions(db, ch); err != nil {
 		log.Errorln("Error scraping for sessions:", err)
 		e.scrapeErrors.WithLabelValues("sessions").Inc()
@@ -163,7 +168,8 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 }
 
 // ScrapeSessions collects session metrics from the v$session view.
-func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
+// DEPRECATED
+func DeprecatedScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 	var err error
 	var activeCount float64
 	var inactiveCount float64
@@ -176,7 +182,7 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 
 	ch <- prometheus.MustNewConstMetric(
 		prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "active"),
-			"Gauge metric with count of sessions marked ACTIVE", []string{}, nil),
+			"Gauge metric with count of sessions marked ACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='ACTIVE}) instead.", []string{}, nil),
 		prometheus.GaugeValue,
 		activeCount,
 	)
@@ -188,11 +194,45 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 
 	ch <- prometheus.MustNewConstMetric(
 		prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "inactive"),
-			"Gauge metric with count of sessions marked INACTIVE.", []string{}, nil),
+			"Gauge metric with count of sessions marked INACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='INACTIVE'}) instead.", []string{}, nil),
 		prometheus.GaugeValue,
 		inactiveCount,
 	)
 
+	return nil
+}
+
+// ScrapeSessions collects session metrics from the v$session view.
+func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
+	var (
+			rows *sql.Rows
+			err error
+  )
+	// Retrieve status and type for all sessions.
+	rows, err = db.Query("SELECT status, type, COUNT(*) FROM v$session GROUP BY status, type")
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			status string
+			sessionType string
+			count float64
+		)
+		if err := rows.Scan(&status, &sessionType, &count); err != nil {
+			return err
+		}
+		ch <- prometheus.MustNewConstMetric(
+			prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "activity"),
+				"Gauge metric with count of sessions by status and type", []string{"status", "type"}, nil),
+			prometheus.GaugeValue,
+			count,
+			status,
+			sessionType,
+		)
+  }
 	return nil
 }
 
