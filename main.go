@@ -175,6 +175,8 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 	}
 
 	defer rows.Close()
+  activeCount := 0.
+  inactiveCount := 0.
 	for rows.Next() {
 		var (
 			status      string
@@ -195,24 +197,26 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 
 		// These metrics are deprecated though so as to not break existing monitoring straight away, are included for the next few releases.
 		if status == "ACTIVE" {
-			ch <- prometheus.MustNewConstMetric(
-				prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "active"),
-					"Gauge metric with count of sessions marked ACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='ACTIVE}) instead.", []string{}, nil),
-				prometheus.GaugeValue,
-				count,
-			)
+			activeCount += count
 		}
 
 		if status == "INACTIVE" {
-			ch <- prometheus.MustNewConstMetric(
-				prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "inactive"),
-					"Gauge metric with count of sessions marked INACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='INACTIVE'}) instead.", []string{}, nil),
-				prometheus.GaugeValue,
-				count,
-			)
+			inactiveCount += count
 		}
-
 	}
+
+	ch <- prometheus.MustNewConstMetric(
+		prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "active"),
+			"Gauge metric with count of sessions marked ACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='ACTIVE}) instead.", []string{}, nil),
+		prometheus.GaugeValue,
+		activeCount,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "inactive"),
+			"Gauge metric with count of sessions marked INACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='INACTIVE'}) instead.", []string{}, nil),
+		prometheus.GaugeValue,
+		inactiveCount,
+	)
 	return nil
 }
 
