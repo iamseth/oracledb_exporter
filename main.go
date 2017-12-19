@@ -19,7 +19,7 @@ var (
 	Version       = "0.0.0.dev"
 	listenAddress = flag.String("web.listen-address", ":9161", "Address to listen on for web interface and telemetry.")
 	metricPath    = flag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
-	landingPage   = []byte("<html><head><title>Oracle DB exporter</title></head><body><h1>Oracle DB exporter</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>")
+	landingPage   = []byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>")
 )
 
 // Metric name parts.
@@ -175,8 +175,8 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 	}
 
 	defer rows.Close()
-  activeCount := 0.
-  inactiveCount := 0.
+	activeCount := 0.
+	inactiveCount := 0.
 	for rows.Next() {
 		var (
 			status      string
