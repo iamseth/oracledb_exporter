@@ -20,6 +20,7 @@ deps:
 	@sudo rpm -Uvh --nodeps oracle*rpm
 	@echo /usr/lib/oracle/12.2/client64/lib | sudo tee /etc/ld.so.conf.d/oracle.conf
 	@sudo ldconfig
+	@PKG_CONFIG_PATH=${PWD} go get
 
 test:
 	@echo test
