@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 	"errors"
+	"context"
 
 	"github.com/BurntSushi/toml"
 
@@ -25,6 +26,7 @@ var (
 	metricPath    = flag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
 	landingPage   = []byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>")
 	customMetrics = flag.String("custom.metrics", os.Getenv("CUSTOM_METRICS"), "File that may contain various custom metrics in a TOML file.")
+	queryTimeout  = flag.String("query.timeout", "5", "Query timeout (in seconds).")
 )
 
 // Metric name parts.
@@ -302,7 +304,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		if err = ScrapeMetric(e.db, ch, metric); err != nil {
 			log.Errorln("Error scraping for", metric.Context, ":", err)
 			e.scrapeErrors.WithLabelValues(metric.Context).Inc()
-		}
+    }
 	}
 	if err = ScrapeSessions(e.db, ch); err != nil {
 		log.Errorln("Error scraping for sessions:", err)
@@ -423,6 +425,9 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 		return nil
 	}
 	err := GeneratePrometheusMetrics(db, genericParser, request)
+	if err != nil {
+		return err
+	}
 	if !ignoreZeroResult && metricsCount == 0 {
 		return errors.New("No metrics found while parsing")
 	}
@@ -433,7 +438,20 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 // Parse SQL result and call parsing function to each row
 func GeneratePrometheusMetrics(db *sql.DB, parse func(row map[string]string) error, query string) error {
 
-	rows, err := db.Query(query) // Note: Ignoring errors for brevity
+	// Add a timeout
+	timeout, err := strconv.Atoi(*queryTimeout)
+	if err != nil {
+		log.Fatal("error while converting timeout option value: ", err)
+		panic(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+	defer cancel()
+	rows, err := db.QueryContext(ctx, query)
+
+	if ctx.Err() == context.DeadlineExceeded {
+		return errors.New("Oracle query timed out")
+	}
+
 	if err != nil {
 		return err
 	}
