@@ -31,6 +31,16 @@ The following metrics are exposed currently.
 - oracledb_tablespace_bytes
 - oracledb_tablespace_max_bytes
 - oracledb_tablespace_bytes_free
+- oracledb_resource_current_utilization
+- oracledb_resource_limit_value
+- oracledb_wait_time_application
+- oracledb_wait_time_commit
+- oracledb_wait_time_concurrency
+- oracledb_wait_time_configuration
+- oracledb_wait_time_network
+- oracledb_wait_time_other
+- oracledb_wait_time_system_io
+- oracledb_wait_time_user_io
 
 # Installation
 
@@ -67,10 +77,74 @@ Usage of oracledb_exporter:
        	If set use a syslog logger or JSON logging. Example: logger:syslog?appname=bob&local=7 or logger:stdout?json=true. Defaults to stderr.
   -log.level value
        	Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal].
+  -custom.metrics string
+        File that may contain various custom metrics in a TOML file.
   -web.listen-address string
        	Address to listen on for web interface and telemetry. (default ":9161")
   -web.telemetry-path string
        	Path under which to expose metrics. (default "/metrics")
+```
+
+# Custom metrics
+
+This exporter does not have the metrics you want? You can provide new one using TOML file. To specify this file to the exporter, you can:
+- Use ``-custom.metrics`` flag followed by the TOML file
+- Export CUSTOM_METRICS variable environment (``export CUSTOM_METRICS=my-custom-metrics.toml``)
+
+This file must contain the following elements:
+- One or several metric section (``[[metric]]``)
+- For each section a context, a request and a map between a field of your request and a comment.
+
+Here's a simple example:
+
+```
+[[metric]]
+context = "test"
+request = "SELECT 1 as value_1, 2 as value_2 FROM DUAL"
+metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same but returning always 2." }
+```
+
+This file produce the following entries in the exporter:
+
+```
+# HELP oracledb_test_value_1 Simple example returning always.
+# TYPE oracledb_test_value_1 gauge
+oracledb_test_value_1 1
+# HELP oracledb_test_value_2 Same but returning always 2.
+# TYPE oracledb_test_value_2 gauge
+oracledb_test_value_2 2
+```
+
+You can also provide labels using labels field. Here's an example providing two metrics, with and without labels:
+
+```
+[[metric]]
+context = "context_no_label"
+request = "SELECT 1 as value_1, 2 as value_2 FROM DUAL"
+metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same but returning always 2." }
+
+[[metric]]
+context = "context_with_labels"
+labels = [ "label_1", "label_2" ]
+request = "SELECT 1 as value_1, 2 as value_2, 'First label' as label_1, 'Second label' as label_2 FROM DUAL"
+metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same but returning always 2." }
+```
+
+This TOML file while produce the following result:
+
+```
+# HELP oracledb_context_no_label_value_1 Simple example returning always 1.
+# TYPE oracledb_context_no_label_value_1 gauge
+oracledb_context_no_label_value_1 1
+# HELP oracledb_context_no_label_value_2 Same but returning always 2.
+# TYPE oracledb_context_no_label_value_2 gauge
+oracledb_context_no_label_value_2 2
+# HELP oracledb_context_with_labels_value_1 Simple example returning always 1.
+# TYPE oracledb_context_with_labels_value_1 gauge
+oracledb_context_with_labels_value_1{label_1="First label",label_2="Second label"} 1
+# HELP oracledb_context_with_labels_value_2 Same but returning always 2.
+# TYPE oracledb_context_with_labels_value_2 gauge
+oracledb_context_with_labels_value_2{label_1="First label",label_2="Second label"} 2
 ```
 
 # Integration with Grafana
