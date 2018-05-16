@@ -25,6 +25,7 @@ var (
 	listenAddress = flag.String("web.listen-address", ":9161", "Address to listen on for web interface and telemetry.")
 	metricPath    = flag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
 	landingPage   = []byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>")
+	defaultFileMetrics = flag.String("default.metrics", "default-metrics.toml", "File with default metrics in a TOML file.")
 	customMetrics = flag.String("custom.metrics", os.Getenv("CUSTOM_METRICS"), "File that may contain various custom metrics in a TOML file.")
 	queryTimeout  = flag.String("query.timeout", "5", "Query timeout (in seconds).")
 )
@@ -51,141 +52,8 @@ type Metrics struct {
 	Metric []Metric
 }
 
-var (
-	additionalMetrics Metrics
-	defaultMetrics = []Metric{
-		Metric {
-			Context: "resource",
-			Labels: []string{ "resource_name" },
-			MetricsDesc: map[string]string {
-				"current_utilization": "Generic counter metric from v$resource_limit view in Oracle (current value).",
-				"limit_value": "Generic counter metric from v$resource_limit view in Oracle (limit value).",
-			},
-			Request: "SELECT resource_name,current_utilization,limit_value FROM v$resource_limit",
-		},
-		Metric {
-			Context: "asm_diskgroup",
-			Labels: []string{ "name" },
-			MetricsDesc: map[string]string {
-				"total": "Total size of ASM disk group.",
-				"free": "Free space available on ASM disk group.",
-			},
-			Request: "SELECT name,total_mb*1024*1024 as total,free_mb*1024*1024 as free FROM v$asm_diskgroup",
-			IgnoreZeroResult: true,
-		},
-		Metric {
-			Context: "activity",
-			MetricsDesc: map[string]string {
-				"value": "Generic counter metric from v$sysstat view in Oracle.",
-			},
-			FieldToAppend: "name",
-			Request: "SELECT name, value FROM v$sysstat WHERE name IN ('parse count (total)', 'execute count', 'user commits', 'user rollbacks')",
-		},
-		Metric {
-			Context: "process",
-			MetricsDesc: map[string]string {
-				"value": "Gauge metric with count of processes.",
-			},
-			Request: "SELECT COUNT(*) as count FROM v$process",
-		},
-		Metric {
-			Context: "wait_time",
-			MetricsDesc: map[string]string {
-				"value": "Generic counter metric from v$waitclassmetric view in Oracle.",
-			},
-			FieldToAppend: "wait_class",
-			Request: `
-  SELECT
-    n.wait_class as WAIT_CLASS,
-    round(m.time_waited/m.INTSIZE_CSEC,3) as VALUE
-  FROM
-    v$waitclassmetric  m, v$system_wait_class n
-  WHERE
-    m.wait_class_id=n.wait_class_id AND n.wait_class != 'Idle'`,
-		},
-		Metric {
-			Context: "tablespace",
-			Labels: []string{"tablespace", "type"},
-			MetricsDesc: map[string]string {
-				"bytes":     "Generic counter metric of tablespaces bytes in Oracle.",
-				"max_bytes": "Generic counter metric of tablespaces max bytes in Oracle.",
-				"free":      "Generic counter metric of tablespaces free bytes in Oracle.",
-			},
-			Request: `
-  SELECT
-    Z.name       as tablespace,
-    dt.contents  as type,
-    Z.bytes      as bytes,
-    Z.max_bytes  as max_bytes,
-    Z.free_bytes as free
-  FROM
-  (
-    SELECT
-      X.name                   as name,
-      SUM(nvl(X.free_bytes,0)) as free_bytes,
-      SUM(X.bytes)             as bytes,
-      SUM(X.max_bytes)         as max_bytes
-    FROM
-      (
-        SELECT
-          ddf.tablespace_name as name,
-          ddf.status as status,
-          ddf.bytes as bytes,
-          sum(dfs.bytes) as free_bytes,
-          CASE
-            WHEN ddf.maxbytes = 0 THEN ddf.bytes
-            ELSE ddf.maxbytes
-          END as max_bytes
-        FROM
-          sys.dba_data_files ddf,
-          sys.dba_tablespaces dt,
-          sys.dba_free_space dfs
-        WHERE ddf.tablespace_name = dt.tablespace_name
-        AND ddf.file_id = dfs.file_id(+)
-        GROUP BY
-          ddf.tablespace_name,
-          ddf.file_name,
-          ddf.status,
-          ddf.bytes,
-          ddf.maxbytes
-      ) X
-    GROUP BY X.name
-    UNION ALL
-    SELECT
-      Y.name                   as name,
-      MAX(nvl(Y.free_bytes,0)) as free_bytes,
-      SUM(Y.bytes)             as bytes,
-      SUM(Y.max_bytes)         as max_bytes
-    FROM
-      (
-        SELECT
-          dtf.tablespace_name as name,
-          dtf.status as status,
-          dtf.bytes as bytes,
-          (
-            SELECT
-              ((f.total_blocks - s.tot_used_blocks)*vp.value)
-            FROM
-              (SELECT tablespace_name, sum(used_blocks) tot_used_blocks FROM gv$sort_segment WHERE  tablespace_name!='DUMMY' GROUP BY tablespace_name) s,
-              (SELECT tablespace_name, sum(blocks) total_blocks FROM dba_temp_files where tablespace_name !='DUMMY' GROUP BY tablespace_name) f,
-              (SELECT value FROM v$parameter WHERE name = 'db_block_size') vp
-            WHERE f.tablespace_name=s.tablespace_name AND f.tablespace_name = dtf.tablespace_name
-          ) as free_bytes,
-          CASE
-            WHEN dtf.maxbytes = 0 THEN dtf.bytes
-            ELSE dtf.maxbytes
-          END as max_bytes
-        FROM
-          sys.dba_temp_files dtf
-      ) Y
-    GROUP BY Y.name
-  ) Z, sys.dba_tablespaces dt
-  WHERE
-    Z.name = dt.tablespace_name`,
-		},
-	}
-
-)
+// Metrics to scrap. Use external file (default-metrics.toml and custom if provided)
+var metricsToScrap Metrics
 
 // Exporter collects Oracle DB metrics. It implements prometheus.Collector.
 type Exporter struct {
@@ -300,15 +168,11 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	}
 	e.up.Set(1)
 
-	for _, metric := range append(defaultMetrics, additionalMetrics.Metric...) {
+	for _, metric := range metricsToScrap.Metric {
 		if err = ScrapeMetric(e.db, ch, metric); err != nil {
 			log.Errorln("Error scraping for", metric.Context, ":", err)
 			e.scrapeErrors.WithLabelValues(metric.Context).Inc()
-    }
-	}
-	if err = ScrapeSessions(e.db, ch); err != nil {
-		log.Errorln("Error scraping for sessions:", err)
-		e.scrapeErrors.WithLabelValues("sessions").Inc()
+		}
 	}
 
 }
@@ -328,54 +192,6 @@ func GetMetricType(metricType string, metricsType map[string]string) prometheus.
 		panic(errors.New("Error while getting prometheus type " + strings.ToLower(strType)))
 	}
 	return valueType
-}
-
-// ScrapeSessions collects session metrics from the v$session view.
-func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
-	activeCount := 0.
-	inactiveCount := 0.
-	parseSessions := func(row map[string]string) error {
-		value, err := strconv.ParseFloat(row["value"], 64)
-		status := row["status"]
-		if err != nil {
-			return err
-		}
-		ch <- prometheus.MustNewConstMetric(
-			prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "activity"),
-				"Gauge metric with count of sessions by status and type", []string{"status", "type"}, nil),
-			prometheus.GaugeValue,
-			value,
-			status,
-			row["type"],
-		)
-
-		// These metrics are deprecated though so as to not break existing monitoring straight away, are included for the next few releases.
-		if status == "ACTIVE" {
-			activeCount += value
-		}
-
-		if status == "INACTIVE" {
-			inactiveCount += value
-		}
-		return nil
-	}
-	// Retrieve status and type for all sessions.
-	if err := GeneratePrometheusMetrics(db, parseSessions, "SELECT status, type, COUNT(*) as value FROM v$session GROUP BY status, type"); err != nil {
-		return err
-	}
-	ch <- prometheus.MustNewConstMetric(
-		prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "active"),
-			"Gauge metric with count of sessions marked ACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='ACTIVE}) instead.", []string{}, nil),
-		prometheus.GaugeValue,
-		activeCount,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "inactive"),
-			"Gauge metric with count of sessions marked INACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='INACTIVE'}) instead.", []string{}, nil),
-		prometheus.GaugeValue,
-		inactiveCount,
-	)
-	return nil
 }
 
 // interface method to call ScrapeGenericValues using Metric struct values
@@ -503,9 +319,15 @@ func main() {
 	flag.Parse()
 	log.Infoln("Starting oracledb_exporter " + Version)
 	dsn := os.Getenv("DATA_SOURCE_NAME")
+	// Load default metrics
+	if _, err := toml.DecodeFile(*defaultFileMetrics, &metricsToScrap); err != nil {
+		log.Errorln(err)
+		panic(errors.New("Error while loading " + *defaultFileMetrics))
+	}
+
 	// If custom metrics, load it
 	if strings.Compare(*customMetrics, "") != 0 {
-		if _, err := toml.DecodeFile(*customMetrics, &additionalMetrics); err != nil {
+		if _, err := toml.DecodeFile(*customMetrics, &metricsToScrap); err != nil {
 			log.Errorln(err)
 			panic(errors.New("Error while loading " + *customMetrics))
 		}

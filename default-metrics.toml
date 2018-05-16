@@ -1,0 +1,120 @@
+[[metric]]
+context = "sessions"
+labels = [ "status", "type" ]
+metricsdesc = { value= "Gauge metric with count of sessions by status and type." }
+request = "SELECT status, type, COUNT(*) as value FROM v$session GROUP BY status, type"
+
+[[metric]]
+context = "resource"
+labels = [ "resource_name" ]
+metricsdesc = { current_utilization= "Generic counter metric from v$resource_limit view in Oracle (current value).", limit_value="Generic counter metric from v$resource_limit view in Oracle (limit value)." }
+request="SELECT resource_name,current_utilization,limit_value FROM v$resource_limit"
+
+[[metric]]
+context = "asm_diskgroup"
+labels = [ "name" ]
+metricsdesc = { total = "Total size of ASM disk group.", free = "Free space available on ASM disk group." }
+request = "SELECT name,total_mb*1024*1024 as total,free_mb*1024*1024 as free FROM v$asm_diskgroup"
+ignorezeroresult = true
+
+[[metric]]
+context = "activity"
+metricsdesc = { value="Generic counter metric from v$sysstat view in Oracle." }
+fieldtoappend = "name"
+request = "SELECT name, value FROM v$sysstat WHERE name IN ('parse count (total)', 'execute count', 'user commits', 'user rollbacks')"
+
+[[metric]]
+context = "process"
+metricsdesc = { count="Gauge metric with count of processes." }
+request = "SELECT COUNT(*) as count FROM v$process"
+
+[[metric]]
+context = "wait_time"
+metricsdesc = { value="Generic counter metric from v$waitclassmetric view in Oracle." }
+fieldtoappend= "wait_class"
+request = '''
+SELECT
+  n.wait_class as WAIT_CLASS,
+  round(m.time_waited/m.INTSIZE_CSEC,3) as VALUE
+FROM
+  v$waitclassmetric  m, v$system_wait_class n
+WHERE
+  m.wait_class_id=n.wait_class_id AND n.wait_class != 'Idle'
+'''
+
+[[metric]]
+context = "tablespace"
+labels = [ "tablespace", "type" ]
+metricsdesc = { bytes = "Generic counter metric of tablespaces bytes in Oracle.", max_bytes = "Generic counter metric of tablespaces max bytes in Oracle.", free = "Generic counter metric of tablespaces free bytes in Oracle." }
+request = '''
+  SELECT
+    Z.name       as tablespace,
+    dt.contents  as type,
+    Z.bytes      as bytes,
+    Z.max_bytes  as max_bytes,
+    Z.free_bytes as free
+  FROM
+  (
+    SELECT
+      X.name                   as name,
+      SUM(nvl(X.free_bytes,0)) as free_bytes,
+      SUM(X.bytes)             as bytes,
+      SUM(X.max_bytes)         as max_bytes
+    FROM
+      (
+        SELECT
+          ddf.tablespace_name as name,
+          ddf.status as status,
+          ddf.bytes as bytes,
+          sum(dfs.bytes) as free_bytes,
+          CASE
+            WHEN ddf.maxbytes = 0 THEN ddf.bytes
+            ELSE ddf.maxbytes
+          END as max_bytes
+        FROM
+          sys.dba_data_files ddf,
+          sys.dba_tablespaces dt,
+          sys.dba_free_space dfs
+        WHERE ddf.tablespace_name = dt.tablespace_name
+        AND ddf.file_id = dfs.file_id(+)
+        GROUP BY
+          ddf.tablespace_name,
+          ddf.file_name,
+          ddf.status,
+          ddf.bytes,
+          ddf.maxbytes
+      ) X
+    GROUP BY X.name
+    UNION ALL
+    SELECT
+      Y.name                   as name,
+      MAX(nvl(Y.free_bytes,0)) as free_bytes,
+      SUM(Y.bytes)             as bytes,
+      SUM(Y.max_bytes)         as max_bytes
+    FROM
+      (
+        SELECT
+          dtf.tablespace_name as name,
+          dtf.status as status,
+          dtf.bytes as bytes,
+          (
+            SELECT
+              ((f.total_blocks - s.tot_used_blocks)*vp.value)
+            FROM
+              (SELECT tablespace_name, sum(used_blocks) tot_used_blocks FROM gv$sort_segment WHERE  tablespace_name!='DUMMY' GROUP BY tablespace_name) s,
+              (SELECT tablespace_name, sum(blocks) total_blocks FROM dba_temp_files where tablespace_name !='DUMMY' GROUP BY tablespace_name) f,
+              (SELECT value FROM v$parameter WHERE name = 'db_block_size') vp
+            WHERE f.tablespace_name=s.tablespace_name AND f.tablespace_name = dtf.tablespace_name
+          ) as free_bytes,
+          CASE
+            WHEN dtf.maxbytes = 0 THEN dtf.bytes
+            ELSE dtf.maxbytes
+          END as max_bytes
+        FROM
+          sys.dba_temp_files dtf
+      ) Y
+    GROUP BY Y.name
+  ) Z, sys.dba_tablespaces dt
+  WHERE
+    Z.name = dt.tablespace_name
+'''

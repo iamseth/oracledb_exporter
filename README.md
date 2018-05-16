@@ -28,8 +28,6 @@ The following metrics are exposed currently.
 - oracledb_activity_user_commits
 - oracledb_activity_user_rollbacks
 - oracledb_sessions_activity
-- oracledb_sessions_active (deprecated. Use ``sum(oracledb_sessions_activity{status='ACTIVE'})`` instead.)
-- oracledb_sessions_inactive (deprecated. Use ``sum(oracledb_sessions_activity{status='INACTIVE'})`` instead.)
 - oracledb_wait_time_application
 - oracledb_wait_time_commit
 - oracledb_wait_time_concurrency
@@ -83,11 +81,17 @@ Usage of oracledb_exporter:
        	Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal].
   -custom.metrics string
         File that may contain various custom metrics in a TOML file.
+  -default.metrics string
+        Default TOML file metrics.
   -web.listen-address string
        	Address to listen on for web interface and telemetry. (default ":9161")
   -web.telemetry-path string
        	Path under which to expose metrics. (default "/metrics")
 ```
+
+# Default metrics
+
+This exporter comes with a set of default metrics defined in **default-metrics.toml**. You can modify this file or provide a different one using ``default.metrics`` option.
 
 # Custom metrics
 

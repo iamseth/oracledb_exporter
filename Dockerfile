@@ -10,6 +10,7 @@ RUN apt-get -qq update && \
 ENV LD_LIBRARY_PATH /usr/lib/oracle/12.2/client64/lib
 
 ADD ./dist/oracledb_exporter.linux-* /oracledb_exporter
+ADD ./default-metrics.toml /default-metrics.toml
 
 RUN chmod 755 /oracledb_exporter
 
