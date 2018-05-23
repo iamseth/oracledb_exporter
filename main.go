@@ -53,7 +53,10 @@ type Metrics struct {
 }
 
 // Metrics to scrap. Use external file (default-metrics.toml and custom if provided)
-var metricsToScrap Metrics
+var (
+  metricsToScrap Metrics
+  additionalMetrics Metrics
+)
 
 // Exporter collects Oracle DB metrics. It implements prometheus.Collector.
 type Exporter struct {
@@ -327,10 +330,11 @@ func main() {
 
 	// If custom metrics, load it
 	if strings.Compare(*customMetrics, "") != 0 {
-		if _, err := toml.DecodeFile(*customMetrics, &metricsToScrap); err != nil {
+		if _, err := toml.DecodeFile(*customMetrics, &additionalMetrics); err != nil {
 			log.Errorln(err)
 			panic(errors.New("Error while loading " + *customMetrics))
 		}
+		metricsToScrap.Metric = append(metricsToScrap.Metric, additionalMetrics.Metric...)
 	}
 	exporter := NewExporter(dsn)
 	prometheus.MustRegister(exporter)
