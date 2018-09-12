@@ -160,6 +160,50 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		e.scrapeErrors.WithLabelValues("sessions").Inc()
 	}
 
+	if err = ScrapeResources(db, ch); err != nil {
+		log.Errorln("Error scraping for processes:", err)
+		e.scrapeErrors.WithLabelValues("processes").Inc()
+	}
+
+}
+
+// ScrapeResources collects session and processes metrics and limit from the v$resource_limit.
+func ScrapeResources(db *sql.DB, ch chan<- prometheus.Metric) error {
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	// Retrieve status and type for all sessions.
+	rows, err = db.Query("select resource_name,current_utilization,TO_NUMBER(limit_value) from v$resource_limit where resource_name in ('processes','sessions')")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			resource_name        string
+			current_utilization  float64
+                        limit_value          float64
+		)
+		if err := rows.Scan(&resource_name, &current_utilization, &limit_value); err != nil {
+			return err
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			prometheus.NewDesc(prometheus.BuildFQName(namespace, resource_name, "current" ),
+				"Gauge metric with count of " + resource_name + " current", []string{}, nil),
+			prometheus.GaugeValue,
+			current_utilization,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			prometheus.NewDesc(prometheus.BuildFQName(namespace, resource_name, "max" ),
+				"Gauge metric with count of " + resource_name + " maximum value configured", []string{}, nil),
+			prometheus.GaugeValue,
+			limit_value,
+		)
+	}
+	return nil
 }
 
 // ScrapeSessions collects session metrics from the v$session view.
