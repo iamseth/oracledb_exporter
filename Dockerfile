@@ -1,4 +1,4 @@
-FROM ubuntu:17.04
+FROM ubuntu:18.04
 MAINTAINER Seth Miller <seth@sethmiller.me>
 
 RUN apt-get -qq update && \
