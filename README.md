@@ -76,3 +76,19 @@ Usage of oracledb_exporter:
 # Integration with Grafana
 
 An example Grafana dashboard is available [here](https://grafana.com/dashboards/3333).
+
+
+## Troubleshooting
+
+# Error scraping for wait_time
+
+If you experience an error `Error scraping for wait_time: sql: Scan error on column index 1: converting driver.Value type string (",01") to a float64: invalid syntax source="main.go:144"` you may need to set the NLS_LANG variable.
+
+```bash
+
+export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1
+export DATA_SOURCE_NAME=system/oracle@myhost
+/path/to/binary -l log.level error -l web.listen-address 9161
+```
+
+If using Docker, set the same variable using the -e flag.
