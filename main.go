@@ -305,7 +305,7 @@ FROM
         ddf.tablespace_name as name,
         ddf.status as status,
         ddf.bytes as bytes,
-        sum(dfs.bytes) as free_bytes,
+        sum(coalesce(dfs.bytes, 0)) as free_bytes,
         CASE
           WHEN ddf.maxbytes = 0 THEN ddf.bytes
           ELSE ddf.maxbytes
