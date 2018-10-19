@@ -31,6 +31,7 @@ The following metrics are exposed currently.
 - oracledb_tablespace_bytes
 - oracledb_tablespace_max_bytes
 - oracledb_tablespace_bytes_free
+- oracledb_process_count
 
 # Installation
 

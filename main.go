@@ -160,6 +160,32 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		e.scrapeErrors.WithLabelValues("sessions").Inc()
 	}
 
+	if err = ScrapeProcesses(db, ch); err != nil {
+		log.Errorln("Error scraping for process:", err)
+		e.scrapeErrors.WithLabelValues("process").Inc()
+	}
+
+}
+
+// ScrapeProcesses gets information about the currently active processes.
+
+func ScrapeProcesses(db *sql.DB, ch chan<- prometheus.Metric) error {
+
+	var count float64
+	err := db.QueryRow("SELECT COUNT(*) FROM v$process").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		prometheus.NewDesc(prometheus.BuildFQName(namespace, "process", "count"),
+			"Gauge metric with count of processes", []string{}, nil),
+		prometheus.GaugeValue,
+		count,
+	)
+
+	return nil
+
 }
 
 // ScrapeSessions collects session metrics from the v$session view.
