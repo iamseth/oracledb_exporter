@@ -4,6 +4,17 @@
 [![GoDoc](https://godoc.org/github.com/iamseth/oracledb_exporter?status.svg)](http://godoc.org/github.com/iamseth/oracledb_exporter)
 [![Report card](https://goreportcard.com/badge/github.com/iamseth/oracledb_exporter)](https://goreportcard.com/badge/github.com/iamseth/oracledb_exporter)
 
+##### Table of Contents  
+
+[Description](#description)  
+[Installation](#installation)  
+[Running](#running)  
+[Grafana](#grafana)  
+[Troubleshooting](#troubleshooting)  
+
+
+# Description
+
 A [Prometheus](https://prometheus.io/) exporter for Oracle modeled after the MySQL exporter. I'm not a DBA or seasoned Go developer so PRs definitely welcomed.
 
 The following metrics are exposed currently.
@@ -51,7 +62,7 @@ Pre-compiled versions for Linux 64 bit and Mac OSX 64 bit can be found under [re
 
 In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html) for your operating system. Only the basic version is required for execution.
 
-# Running the Binary
+# Running
 
 Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting. For Example
 
@@ -79,9 +90,9 @@ Usage of oracledb_exporter:
 An example Grafana dashboard is available [here](https://grafana.com/dashboards/3333).
 
 
-## Troubleshooting
+# Troubleshooting
 
-# Error scraping for wait_time
+## Error scraping for wait_time
 
 If you experience an error `Error scraping for wait_time: sql: Scan error on column index 1: converting driver.Value type string (",01") to a float64: invalid syntax source="main.go:144"` you may need to set the NLS_LANG variable.
 
