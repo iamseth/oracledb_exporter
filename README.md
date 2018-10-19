@@ -78,9 +78,9 @@ Usage of oracledb_exporter:
 An example Grafana dashboard is available [here](https://grafana.com/dashboards/3333).
 
 
-## Troubleshooting
+# Troubleshooting
 
-# Error scraping for wait_time
+## Error scraping for wait_time
 
 If you experience an error `Error scraping for wait_time: sql: Scan error on column index 1: converting driver.Value type string (",01") to a float64: invalid syntax source="main.go:144"` you may need to set the NLS_LANG variable.
 
