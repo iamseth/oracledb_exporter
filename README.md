@@ -6,11 +6,11 @@
 
 ##### Table of Contents  
 
-[Description](#Description)  
-[Installation](#Installation)  
-[Running](#Running)  
-[Grafana](#Grafana)  
-[Troubleshooting](#Troubleshooting)  
+[Description](#description)  
+[Installation](#installation)  
+[Running](#running)  
+[Grafana](#grafana)  
+[Troubleshooting](#troubleshooting)  
 
 
 # Description
