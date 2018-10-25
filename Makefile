@@ -50,7 +50,7 @@ docker: oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm oracle-instantcli
 	docker build --build-arg VERSION=$(VERSION) -t "yannig/oracledb_exporter:${VERSION}" .
 	docker tag yannig/oracledb_exporter:${VERSION} yannig/oracledb_exporter:latest
 
-travis: deps test prereq deps linux docker
+travis: prereq deps test linux docker
 	@true
 
 .PHONY: build deps test clean docker travis
