@@ -220,7 +220,7 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 		}
 		ch <- prometheus.MustNewConstMetric(
 			prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "activity"),
-					   "Gauge metric with count of sessions by status, machine, service_name", []string{"status", "machine","service_name"}}, nil),
+					   "Gauge metric with count of sessions by status, machine, service_name", []string{"status", "machine","service_name"}, nil),
 			prometheus.GaugeValue,
 			count,
 			status,
