@@ -224,7 +224,8 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			count,
 			status,
-			sessionType,
+			machine,
+			service_name,
 		)
 	}
 	return nil
