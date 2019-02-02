@@ -140,14 +140,15 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	isUpRows.Close()
 	e.up.Set(1)
 
-	if err = ScrapeActivity(db, ch); err != nil {
-		log.Errorln("Error scraping for activity:", err)
-		e.scrapeErrors.WithLabelValues("activity").Inc()
+	if err =ScrapeStorage(db, ch); err != nil {
+	        log.Errorln("Error scraping for Storage:", err)
+		e.scrapeErrors.WithLabelValues("activity").Inc()	
 	}
-
-	if err = ScrapeTablespace(db, ch); err != nil {
-		log.Errorln("Error scraping for tablespace:", err)
-		e.scrapeErrors.WithLabelValues("tablespace").Inc()
+	
+	
+	if err = ScrapeSessions(db, ch); err != nil {
+		log.Errorln("Error scraping for Sessions:", err)
+		e.scrapeErrors.WithLabelValues("activity").Inc()
 	}
 
 	if err = ScrapeWaitTime(db, ch); err != nil {
@@ -155,11 +156,16 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		e.scrapeErrors.WithLabelValues("wait_time").Inc()
 	}
 
-	if err = ScrapeSessions(db, ch); err != nil {
-		log.Errorln("Error scraping for sessions:", err)
+	if err = ScrapePasswords(db, ch); err != nil {
+		log.Errorln("Error scraping for Passwords:", err)
 		e.scrapeErrors.WithLabelValues("sessions").Inc()
 	}
 
+	if err = ScrapeTopSQL(db, ch); err != nil {
+		log.Errorln("Error scraping for TopSQL:", err)
+		e.scrapeErrors.WithLabelValues("process").Inc()
+	}
+	
 	if err = ScrapeProcesses(db, ch); err != nil {
 		log.Errorln("Error scraping for process:", err)
 		e.scrapeErrors.WithLabelValues("process").Inc()
@@ -195,7 +201,7 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 		err  error
 	)
 	// Retrieve status and type for all sessions.
-	rows, err = db.Query("SELECT status, type, COUNT(*) FROM v$session GROUP BY status, type")
+	rows, err = db.Query("SELECT status, machine, service_name, COUNT(*) FROM v$session GROUP BY status, machine, service_name")
 	if err != nil {
 		return err
 	}
@@ -206,43 +212,22 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 	for rows.Next() {
 		var (
 			status      string
-			sessionType string
+			machine     string
+			service     string
 			count       float64
 		)
-		if err := rows.Scan(&status, &sessionType, &count); err != nil {
+		if err := rows.Scan(&status, &machine, &service, &count); err != nil {
 			return err
 		}
 		ch <- prometheus.MustNewConstMetric(
 			prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "activity"),
-				"Gauge metric with count of sessions by status and type", []string{"status", "type"}, nil),
+					   "Gauge metric with count of sessions by status, machine, service_name", []string{"status", "machine","service_name"}}, nil),
 			prometheus.GaugeValue,
 			count,
 			status,
 			sessionType,
 		)
-
-		// These metrics are deprecated though so as to not break existing monitoring straight away, are included for the next few releases.
-		if status == "ACTIVE" {
-			activeCount += count
-		}
-
-		if status == "INACTIVE" {
-			inactiveCount += count
-		}
 	}
-
-	ch <- prometheus.MustNewConstMetric(
-		prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "active"),
-			"Gauge metric with count of sessions marked ACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='ACTIVE}) instead.", []string{}, nil),
-		prometheus.GaugeValue,
-		activeCount,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		prometheus.NewDesc(prometheus.BuildFQName(namespace, "sessions", "inactive"),
-			"Gauge metric with count of sessions marked INACTIVE. DEPRECATED: use sum(oracledb_sessions_activity{status='INACTIVE'}) instead.", []string{}, nil),
-		prometheus.GaugeValue,
-		inactiveCount,
-	)
 	return nil
 }
 
