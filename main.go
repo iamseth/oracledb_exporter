@@ -144,8 +144,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	        log.Errorln("Error scraping for Storage:", err)
 		e.scrapeErrors.WithLabelValues("activity").Inc()	
 	}
-	
-	
+		
 	if err = ScrapeSessions(db, ch); err != nil {
 		log.Errorln("Error scraping for Sessions:", err)
 		e.scrapeErrors.WithLabelValues("activity").Inc()
@@ -289,7 +288,7 @@ func ScrapeActivity(db *sql.DB, ch chan<- prometheus.Metric) error {
 }
 
 // ScrapeTablespace collects tablespace size.
-func ScrapeTablespace(db *sql.DB, ch chan<- prometheus.Metric) error {
+func ScrapeStorage(db *sql.DB, ch chan<- prometheus.Metric) error {
 	var (
 		rows *sql.Rows
 		err  error
@@ -405,6 +404,19 @@ WHERE
 		ch <- prometheus.MustNewConstMetric(tablespaceFreeBytesDesc, prometheus.GaugeValue, float64(bytes_free), tablespace_name, contents)
 	}
 	return nil
+}
+
+func ScrapeTablespace(db *sql.DB, ch chan<- prometheus.Metric) error {
+     return nil;	
+}
+
+func ScrapePasswords(db *sql.DB, ch chan<- prometheus.Metric) error {
+      return nil;
+}
+
+
+func ScrapeTopSQL(db *sql.DB, ch chan<- prometheus.Metric) error {
+      return nil;
 }
 
 // Oracle gives us some ugly names back. This function cleans things up for Prometheus.
