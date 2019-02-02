@@ -206,8 +206,6 @@ func ScrapeSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 	}
 
 	defer rows.Close()
-	activeCount := 0.
-	inactiveCount := 0.
 	for rows.Next() {
 		var (
 			status      string
