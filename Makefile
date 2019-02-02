@@ -29,8 +29,8 @@ clean:
 	@rm -rf ./dist
 
 docker:
-	@docker build -t "iamseth/oracledb_exporter:${VERSION}" .
-	@docker tag iamseth/oracledb_exporter:${VERSION} iamseth/oracledb_exporter:latest
+	@docker build -t "akolk/oraperf_exporter:${VERSION}" .
+	@docker tag akolk/oraperf_exporter:${VERSION} iamseth/oracledb_exporter:latest
 
 travis: deps test build docker
 	@true
