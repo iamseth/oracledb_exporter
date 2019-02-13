@@ -17,7 +17,7 @@ deploy:
     all_branches: true
 
 after_success:
-  - if [[ "$TRAVIS_BRANCH" == "master" ]]; then
-      docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD ;
+  - if [[ "$TRAVIS_BRANCH" == "Kadaster" ]]; then
+      docker login -u $DOCKER_USER -p $DOCKER_PASS ;
       make push-image ;
     fi
