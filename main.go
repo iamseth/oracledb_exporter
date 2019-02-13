@@ -327,17 +327,17 @@ where
 	tablespaceBytesDesc := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "tablespace", "totalbytes"),
 		"Generic counter metric of tablespaces bytes in Oracle.",
-		[]string{"tablespace", "type"}, nil,
+		[]string{"tablespace"}, nil,
 	)
 	tablespaceMaxBytesDesc := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "tablespace", "usedbytes"),
 		"Generic counter metric of tablespaces max bytes in Oracle.",
-		[]string{"tablespace", "type"}, nil,
+		[]string{"tablespace"}, nil,
 	)
 	tablespaceFreeBytesDesc := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "tablespace", "freebytes"),
 		"Generic counter metric of tablespaces free bytes in Oracle.",
-		[]string{"tablespace", "type"}, nil,
+		[]string{"tablespace"}, nil,
 	)
 
 	for rows.Next() {
@@ -349,9 +349,9 @@ where
 		if err := rows.Scan(&tablespace_name, &usedbytes, &freebytes, &totalbytes); err != nil {
 			return err
 		}
-		ch <- prometheus.MustNewConstMetric(tablespaceBytesDesc, prometheus.GaugeValue, float64(bytes), tablespace_name, contents)
-		ch <- prometheus.MustNewConstMetric(tablespaceMaxBytesDesc, prometheus.GaugeValue, float64(usedbytes), tablespace_name, contents)
-		ch <- prometheus.MustNewConstMetric(tablespaceFreeBytesDesc, prometheus.GaugeValue, float64(freebytes), tablespace_name, contents)
+		ch <- prometheus.MustNewConstMetric(tablespaceBytesDesc, prometheus.GaugeValue, float64(totalbytes), tablespace_name)
+		ch <- prometheus.MustNewConstMetric(tablespaceMaxBytesDesc, prometheus.GaugeValue, float64(usedbytes), tablespace_name)
+		ch <- prometheus.MustNewConstMetric(tablespaceFreeBytesDesc, prometheus.GaugeValue, float64(freebytes), tablespace_name)
 	}
 	return nil
 }
