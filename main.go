@@ -171,12 +171,12 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	}
 	
 	if err = ScrapeActiveTransactions(db, ch); err != nil {
-		log.ErrorIn("Error scraing for active transacctions:", err)
+		log.ErrorIn("Error scraping for activetransactions:", err)
 		e.scrapeErrors.WithLabelValues("activetransactions").Inc()
 	}
 	
 	if err = ScrapeBlockedSessions(db, ch); err != nil {
-		log.ErrorIn("Error scraing for blocking sessions:", err)
+		log.ErrorIn("Error scraping for blockedsessions:", err)
 		e.scrapeErrors.WithLabelValues("blockedsessions").Inc()
 	}
 }
@@ -213,9 +213,7 @@ func ScrapeActiveTransactions(db *sql.DB, ch chan<- prometheus.Metric) error {
 		prometheus.GaugeValue,
 		count,
 	)
-
 	return nil
-
 }
 
 // ScrapeProcesses gets information about the currently active processes.
@@ -234,9 +232,7 @@ func ScrapeProcesses(db *sql.DB, ch chan<- prometheus.Metric) error {
 		prometheus.GaugeValue,
 		count,
 	)
-
 	return nil
-
 }
 
 // ScrapeSessions collects session metrics from the v$session view.
