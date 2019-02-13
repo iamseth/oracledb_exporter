@@ -17,5 +17,7 @@ deploy:
     all_branches: true
 
 after_success:
-  echo $DOCKER_PASS |docker login -u="$DOCKER_USER" 
-  docker push akolk/oracledb_exporter:0.0.9K
+  - if [[ "$TRAVIS_BRANCH" == "master" ]]; then
+      docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD ;
+      make push-image ;
+    fi
