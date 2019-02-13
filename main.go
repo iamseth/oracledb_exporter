@@ -162,13 +162,61 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 	if err = ScrapeTopSQL(db, ch); err != nil {
 		log.Errorln("Error scraping for TopSQL:", err)
-		e.scrapeErrors.WithLabelValues("process").Inc()
+		e.scrapeErrors.WithLabelValues("sql").Inc()
 	}
 	
 	if err = ScrapeProcesses(db, ch); err != nil {
 		log.Errorln("Error scraping for process:", err)
 		e.scrapeErrors.WithLabelValues("process").Inc()
 	}
+	
+	if err = ScrapeActiveTransactions(db, ch); err != nil {
+		log.ErrorIn("Error scraing for active transacctions:", err);
+		e.scrapeErrors.WithLabelValues("activetransactions").Inc();
+	}
+	
+	if err = ScrapeBlockedSessions(db, ch); err != nil {
+		log.ErrorIn("Error scraing for blocking sessions:", err);
+		e.scrapeErrors.WithLabelValues("blockedsessions").Inc();
+	}
+}
+
+func ScrapeBlockedSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
+
+	var count float64
+	err := db.QueryRow("SELECT COUNT(*) FROM v$session where blocking_session is not null").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		prometheus.NewDesc(prometheus.BuildFQName(namespace, "blockedsessions", "count"),
+			"Gauge metric with count of blockedsessions", []string{}, nil),
+		prometheus.GaugeValue,
+		count,
+	)
+
+	return nil
+
+}
+
+
+func ScrapeActivetransaction(db *sql.DB, ch chan<- prometheus.Metric) error {
+
+	var count float64
+	err := db.QueryRow("SELECT COUNT(*) FROM v$transaction where status = 'ACTIVE'").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		prometheus.NewDesc(prometheus.BuildFQName(namespace, "activetransactions", "count"),
+			"Gauge metric with count of activetransactions", []string{}, nil),
+		prometheus.GaugeValue,
+		count,
+	)
+
+	return nil
 
 }
 
