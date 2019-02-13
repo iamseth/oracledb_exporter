@@ -293,114 +293,65 @@ func ScrapeStorage(db *sql.DB, ch chan<- prometheus.Metric) error {
 		err  error
 	)
 	rows, err = db.Query(`
-SELECT
-  Z.name,
-  dt.status,
-  dt.contents,
-  dt.extent_management,
-  Z.bytes,
-  Z.max_bytes,
-  Z.free_bytes
-FROM
-(
-  SELECT
-    X.name                   as name,
-    SUM(nvl(X.free_bytes,0)) as free_bytes,
-    SUM(X.bytes)             as bytes,
-    SUM(X.max_bytes)         as max_bytes
-  FROM
-    (
-      SELECT
-        ddf.tablespace_name as name,
-        ddf.status as status,
-        ddf.bytes as bytes,
-        sum(coalesce(dfs.bytes, 0)) as free_bytes,
-        CASE
-          WHEN ddf.maxbytes = 0 THEN ddf.bytes
-          ELSE ddf.maxbytes
-        END as max_bytes
-      FROM
-        sys.dba_data_files ddf,
-        sys.dba_tablespaces dt,
-        sys.dba_free_space dfs
-      WHERE ddf.tablespace_name = dt.tablespace_name
-      AND ddf.file_id = dfs.file_id(+)
-      GROUP BY
-        ddf.tablespace_name,
-        ddf.file_name,
-        ddf.status,
-        ddf.bytes,
-        ddf.maxbytes
-    ) X
-  GROUP BY X.name
-  UNION ALL
-  SELECT
-    Y.name                   as name,
-    MAX(nvl(Y.free_bytes,0)) as free_bytes,
-    SUM(Y.bytes)             as bytes,
-    SUM(Y.max_bytes)         as max_bytes
-  FROM
-    (
-      SELECT
-        dtf.tablespace_name as name,
-        dtf.status as status,
-        dtf.bytes as bytes,
-        (
-          SELECT
-            ((f.total_blocks - s.tot_used_blocks)*vp.value)
-          FROM
-            (SELECT tablespace_name, sum(used_blocks) tot_used_blocks FROM gv$sort_segment WHERE  tablespace_name!='DUMMY' GROUP BY tablespace_name) s,
-            (SELECT tablespace_name, sum(blocks) total_blocks FROM dba_temp_files where tablespace_name !='DUMMY' GROUP BY tablespace_name) f,
-            (SELECT value FROM v$parameter WHERE name = 'db_block_size') vp
-          WHERE f.tablespace_name=s.tablespace_name AND f.tablespace_name = dtf.tablespace_name
-        ) as free_bytes,
-        CASE
-          WHEN dtf.maxbytes = 0 THEN dtf.bytes
-          ELSE dtf.maxbytes
-        END as max_bytes
-      FROM
-        sys.dba_temp_files dtf
-    ) Y
-  GROUP BY Y.name
-) Z, sys.dba_tablespaces dt
-WHERE
-  Z.name = dt.tablespace_name
+select
+   fs.tablespace_name                          Tablespace,
+   (df.totalspace - fs.freespace)              UsedMB,
+   fs.freespace                                FreeMB,
+   df.totalspace                               TotalMB
+   --,
+   --round(100 * (fs.freespace / df.totalspace)) PctFree
+from
+   (select
+      tablespace_name,
+      round(sum(bytes) / 1048576) TotalSpace
+   from
+      dba_data_files
+   group by
+      tablespace_name
+   ) df,
+   (select
+      tablespace_name,
+      round(sum(bytes) / 1048576) FreeSpace
+   from
+      dba_free_space
+   group by
+      tablespace_name
+   ) fs
+where
+   df.tablespace_name = fs.tablespace_name
 `)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	tablespaceBytesDesc := prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "tablespace", "bytes"),
+		prometheus.BuildFQName(namespace, "tablespace", "totalbytes"),
 		"Generic counter metric of tablespaces bytes in Oracle.",
 		[]string{"tablespace", "type"}, nil,
 	)
 	tablespaceMaxBytesDesc := prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "tablespace", "max_bytes"),
+		prometheus.BuildFQName(namespace, "tablespace", "usedbytes"),
 		"Generic counter metric of tablespaces max bytes in Oracle.",
 		[]string{"tablespace", "type"}, nil,
 	)
 	tablespaceFreeBytesDesc := prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "tablespace", "free"),
+		prometheus.BuildFQName(namespace, "tablespace", "freebytes"),
 		"Generic counter metric of tablespaces free bytes in Oracle.",
 		[]string{"tablespace", "type"}, nil,
 	)
 
 	for rows.Next() {
 		var tablespace_name string
-		var status string
-		var contents string
-		var extent_management string
-		var bytes float64
-		var max_bytes float64
-		var bytes_free float64
+		var totalbytes float64
+		var usedbytes float64
+		var freebytes float64
 
-		if err := rows.Scan(&tablespace_name, &status, &contents, &extent_management, &bytes, &max_bytes, &bytes_free); err != nil {
+		if err := rows.Scan(&tablespace_name, &usedbytes, &freebytes, &totalbytes); err != nil {
 			return err
 		}
 		ch <- prometheus.MustNewConstMetric(tablespaceBytesDesc, prometheus.GaugeValue, float64(bytes), tablespace_name, contents)
-		ch <- prometheus.MustNewConstMetric(tablespaceMaxBytesDesc, prometheus.GaugeValue, float64(max_bytes), tablespace_name, contents)
-		ch <- prometheus.MustNewConstMetric(tablespaceFreeBytesDesc, prometheus.GaugeValue, float64(bytes_free), tablespace_name, contents)
+		ch <- prometheus.MustNewConstMetric(tablespaceMaxBytesDesc, prometheus.GaugeValue, float64(usedbytes), tablespace_name, contents)
+		ch <- prometheus.MustNewConstMetric(tablespaceFreeBytesDesc, prometheus.GaugeValue, float64(freebytes), tablespace_name, contents)
 	}
 	return nil
 }
