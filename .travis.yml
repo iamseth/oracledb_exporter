@@ -18,4 +18,4 @@ deploy:
 
 after_success:
   docker login -u="$DOCKER_USER" -p="$DOCKER_PASS";
-  docker push akolk/oracledb_exporter:latest
+  docker push akolk/oracledb_exporter:0.0.9K
