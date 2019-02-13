@@ -195,9 +195,7 @@ func ScrapeBlockedSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 		prometheus.GaugeValue,
 		count,
 	)
-
 	return nil
-
 }
 
 
