@@ -19,4 +19,4 @@ deploy:
 
 after_success:
   docker login -u="$DOCKER_USER" -p="$DOCKER_PASS";
-  docker push akolk/oraperf_exporter:${TRAVIS_TAG:-latest}
+  docker push akolk/oraperf_exporter:latest
