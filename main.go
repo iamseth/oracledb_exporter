@@ -171,13 +171,13 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	}
 	
 	if err = ScrapeActiveTransactions(db, ch); err != nil {
-		log.ErrorIn("Error scraing for active transacctions:", err);
-		e.scrapeErrors.WithLabelValues("activetransactions").Inc();
+		log.ErrorIn("Error scraing for active transacctions:", err)
+		e.scrapeErrors.WithLabelValues("activetransactions").Inc()
 	}
 	
 	if err = ScrapeBlockedSessions(db, ch); err != nil {
-		log.ErrorIn("Error scraing for blocking sessions:", err);
-		e.scrapeErrors.WithLabelValues("blockedsessions").Inc();
+		log.ErrorIn("Error scraing for blocking sessions:", err)
+		e.scrapeErrors.WithLabelValues("blockedsessions").Inc()
 	}
 }
 
