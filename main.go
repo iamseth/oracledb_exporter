@@ -201,7 +201,7 @@ func ScrapeBlockedSessions(db *sql.DB, ch chan<- prometheus.Metric) error {
 }
 
 
-func ScrapeActivetransaction(db *sql.DB, ch chan<- prometheus.Metric) error {
+func ScrapeActiveTransaction(db *sql.DB, ch chan<- prometheus.Metric) error {
 
 	var count float64
 	err := db.QueryRow("SELECT COUNT(*) FROM v$transaction where status = 'ACTIVE'").Scan(&count)
