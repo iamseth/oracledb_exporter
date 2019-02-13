@@ -1,4 +1,4 @@
-VERSION := 0.0.7
+VERSION := 0.0.9K
 
 LDFLAGS := -X main.Version=$(VERSION)
 GOFLAGS := -ldflags "$(LDFLAGS) -s -w"
@@ -29,8 +29,8 @@ clean:
 	@rm -rf ./dist
 
 docker:
-	@docker build -t "akolk/oraperf_exporter:${VERSION}" .
-	@docker tag akolk/oraperf_exporter:${VERSION} iamseth/oracledb_exporter:latest
+	@docker build -t "akolk/oracledb_exporter:${VERSION}" .
+	@docker tag akolk/oracledb_exporter:${VERSION} akolk/oracledb_exporter:latestK
 
 travis: deps test build docker
 	@true
