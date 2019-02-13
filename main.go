@@ -171,12 +171,12 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	}
 	
 	if err = ScrapeActiveTransactions(db, ch); err != nil {
-		log.ErrorIn("Error scraping for activetransactions:", err)
+		log.Errorln("Error scraping for activetransactions:", err)
 		e.scrapeErrors.WithLabelValues("activetransactions").Inc()
 	}
 	
 	if err = ScrapeBlockedSessions(db, ch); err != nil {
-		log.ErrorIn("Error scraping for blockedsessions:", err)
+		log.Errorln("Error scraping for blockedsessions:", err)
 		e.scrapeErrors.WithLabelValues("blockedsessions").Inc()
 	}
 }
