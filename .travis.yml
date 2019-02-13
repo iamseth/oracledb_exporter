@@ -8,7 +8,6 @@ install: true
 script: make travis
 deploy:
   skip_cleanup: true
-  provider: releases
   file:
     - "./dist/oracledb_exporter.linux-amd64"
     - "./dist/oracledb_exporter.darwin-amd64"
