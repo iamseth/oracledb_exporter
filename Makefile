@@ -21,6 +21,9 @@ deps:
 	@echo /usr/lib/oracle/12.2/client64/lib | sudo tee /etc/ld.so.conf.d/oracle.conf
 	@sudo ldconfig
 
+push-image:
+	docker push akolk/oracle_dbexporter:${VERSION}
+
 test:
 	@echo test
 	@PKG_CONFIG_PATH=${PWD} go test $$(go list ./... | grep -v /vendor/)
