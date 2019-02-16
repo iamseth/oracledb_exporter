@@ -47,10 +47,10 @@ clean:
 	@rm -rf ./dist
 
 docker: oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm
-	docker build --build-arg VERSION=$(VERSION) -t "yannig/oracledb_exporter:${VERSION}" .
-	docker tag yannig/oracledb_exporter:${VERSION} yannig/oracledb_exporter:latest
+	docker build --build-arg VERSION=$(VERSION) -t "iamseth/oracledb_exporter:$(VERSION)" .
+	docker tag iamseth/oracledb_exporter:$(VERSION) iamseth/oracledb_exporter:latest
 
-travis: prereq deps test linux darwin
+travis: prereq deps test linux darwin docker
 	@true
 
 .PHONY: build deps test clean docker travis
