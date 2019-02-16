@@ -21,4 +21,5 @@ deploy:
 after_success:
   docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
   docker push iamseth/oracledb_exporter:${TRAVIS_TAG:-latest}
+  docker push iamseth/oracledb_exporter:latest
 
