@@ -6,7 +6,7 @@ ORA_RPM = oracle-instantclient18.3-devel-18.3.0.0.0-3.x86_64.rpm oracle-instantc
 LD_LIBRARY_PATH = /usr/lib/oracle/18.3/client64/lib
 
 %.rpm:
-	wget http://yum.oracle.com/repo/OracleLinux/OL7/oracle/instantclient/x86_64/getPackage/$@
+	wget -q http://yum.oracle.com/repo/OracleLinux/OL7/oracle/instantclient/x86_64/getPackage/$@
 
 prereq: $(ORA_RPM)
 	@echo deps
