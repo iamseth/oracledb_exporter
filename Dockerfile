@@ -1,8 +1,11 @@
 FROM golang:1.11 AS build
 
+ENV LD_LIBRARY_PATH /usr/lib/oracle/18.3/client64/lib
+
 RUN apt-get -qq update && apt-get install --no-install-recommends -qq libaio1 rpm
+COPY oci8.pc /usr/share/pkgconfig
 COPY *.rpm /
-RUN rpm -Uvh --nodeps /oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm /oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm && rm /*.rpm
+RUN rpm -Uvh --nodeps /oracle-instantclient*.x86_64.rpm && rm /*.rpm
 RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
 
 WORKDIR /go/src/oracledb_exporter
@@ -14,7 +17,6 @@ ENV VERSION ${VERSION:-0.1.0}
 
 ENV PKG_CONFIG_PATH /go/src/oracledb_exporter
 ENV GOOS            linux
-ENV LD_LIBRARY_PATH /usr/lib/oracle/12.2/client64/lib
 
 RUN go build -v -ldflags "-X main.Version=${VERSION} -s -w"
 
@@ -24,13 +26,13 @@ LABEL maintainer="Yannig Perré <yannig.perre@gmail.com>"
 
 ENV VERSION ${VERSION:-0.1.0}
 
-COPY oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm /
+COPY oracle-instantclient*basic*.rpm /
 
 RUN apt-get -qq update && \
-    apt-get install --no-install-recommends -qq libaio1 rpm -y && rpm -Uvh --nodeps /oracle*rpm && \
+    apt-get -qq install --no-install-recommends -qq libaio1 rpm -y && rpm -Uvh --nodeps /oracle*rpm && \
     rm -f /oracle*rpm
 
-ENV LD_LIBRARY_PATH /usr/lib/oracle/12.2/client64/lib
+ENV LD_LIBRARY_PATH /usr/lib/oracle/18.3/client64/lib
 RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
 
 COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter

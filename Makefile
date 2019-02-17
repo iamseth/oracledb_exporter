@@ -1,16 +1,13 @@
-VERSION := 0.2.0
+VERSION := 0.2.1
 LDFLAGS := -X main.Version=$(VERSION)
 GOFLAGS := -ldflags "$(LDFLAGS) -s -w"
 GOARCH ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m)))
+ORA_RPM = oracle-instantclient18.3-devel-18.3.0.0.0-3.x86_64.rpm oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64.rpm
 
+%.rpm:
+	wget http://yum.oracle.com/repo/OracleLinux/OL7/oracle/instantclient/x86_64/getPackage/$@
 
-oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm:
-	wget -q https://www.dropbox.com/s/f2ul3y0854y8oqw/oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm -O oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm
-
-oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm:
-	wget -q https://www.dropbox.com/s/qftd81ezcp8k9kd/oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm -O oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm
-
-prereq: oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm
+prereq: $(ORA_RPM)
 	@echo deps
 	@sudo apt-get -qq update
 	@sudo apt-get install --no-install-recommends -qq libaio1 rpm
@@ -46,7 +43,7 @@ test:
 clean:
 	@rm -rf ./dist
 
-docker: oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm
+docker:  $(ORA_RPM)
 	docker build --build-arg VERSION=$(VERSION) -t "iamseth/oracledb_exporter:$(VERSION)" .
 	docker tag iamseth/oracledb_exporter:$(VERSION) iamseth/oracledb_exporter:latest
 
