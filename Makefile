@@ -44,9 +44,15 @@ test:
 clean:
 	@rm -rf ./dist
 
-docker:  $(ORA_RPM)
+docker: ubuntu-image alpine-image
+
+ubuntu-image: $(ORA_RPM)
 	docker build --build-arg VERSION=$(VERSION) -t "iamseth/oracledb_exporter:$(VERSION)" .
-	docker tag iamseth/oracledb_exporter:$(VERSION) iamseth/oracledb_exporter:latest
+	docker tag "iamseth/oracledb_exporter:$(VERSION)" "iamseth/oracledb_exporter:latest"
+
+alpine-image: $(ORA_RPM)
+	docker build -f alpine/Dockerfile --build-arg VERSION=$(VERSION) -t "iamseth/oracledb_exporter:$(VERSION)" .
+	docker tag "iamseth/oracledb_exporter:$(VERSION)" "iamseth/oracledb_exporter:latest"
 
 travis: prereq deps test linux darwin docker
 	@true
