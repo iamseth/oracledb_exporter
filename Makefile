@@ -3,6 +3,7 @@ LDFLAGS := -X main.Version=$(VERSION)
 GOFLAGS := -ldflags "$(LDFLAGS) -s -w"
 GOARCH ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m)))
 ORA_RPM = oracle-instantclient18.3-devel-18.3.0.0.0-3.x86_64.rpm oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64.rpm
+LD_LIBRARY_PATH = /usr/lib/oracle/18.3/client64/lib
 
 %.rpm:
 	wget http://yum.oracle.com/repo/OracleLinux/OL7/oracle/instantclient/x86_64/getPackage/$@
@@ -12,7 +13,7 @@ prereq: $(ORA_RPM)
 	@sudo apt-get -qq update
 	@sudo apt-get install --no-install-recommends -qq libaio1 rpm
 	@sudo rpm -Uvh --nodeps oracle*rpm
-	@echo /usr/lib/oracle/12.2/client64/lib | sudo tee /etc/ld.so.conf.d/oracle.conf
+	@echo $(LD_LIBRARY_PATH) | sudo tee /etc/ld.so.conf.d/oracle.conf
 	@sudo ldconfig
 
 linux:
