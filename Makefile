@@ -42,17 +42,23 @@ test:
 	@PKG_CONFIG_PATH=${PWD} go test $$(go list ./... | grep -v /vendor/)
 
 clean:
-	@rm -rf ./dist
+	@rm -rf ./dist sgerrand.rsa.pub glibc-2.29-r0.apk
 
 docker: ubuntu-image alpine-image
+
+sgerrand.rsa.pub:
+	wget -q -O sgerrand.rsa.pub  https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub
+
+glibc-2.29-r0.apk:
+	wget -q -O glibc-2.29-r0.apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.29-r0/glibc-2.29-r0.apk
 
 ubuntu-image: $(ORA_RPM)
 	docker build --build-arg VERSION=$(VERSION) -t "iamseth/oracledb_exporter:$(VERSION)" .
 	docker tag "iamseth/oracledb_exporter:$(VERSION)" "iamseth/oracledb_exporter:latest"
 
-alpine-image: $(ORA_RPM)
-	docker build -f alpine/Dockerfile --build-arg VERSION=$(VERSION) -t "iamseth/oracledb_exporter:$(VERSION)" .
-	docker tag "iamseth/oracledb_exporter:$(VERSION)" "iamseth/oracledb_exporter:latest"
+alpine-image: $(ORA_RPM) sgerrand.rsa.pub glibc-2.29-r0.apk
+	docker build -f alpine/Dockerfile --build-arg VERSION=$(VERSION) -t "iamseth/oracledb_exporter:$(VERSION)-alpine" .
+	docker tag "iamseth/oracledb_exporter:$(VERSION)-alpine" "iamseth/oracledb_exporter:alpine"
 
 travis: prereq deps test linux darwin docker
 	@true

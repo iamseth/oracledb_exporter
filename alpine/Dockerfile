@@ -2,7 +2,7 @@ FROM golang:1.11 AS build
 
 ENV LD_LIBRARY_PATH /usr/lib/oracle/18.3/client64/lib
 
-RUN apt-get -qq update && apt-get install --no-install-recommends -qq libaio1 rpm
+RUN apt-get -qq update && apt-get install --no-install-recommends -qq libaio1 rpm libgcc1
 COPY oci8.pc /usr/share/pkgconfig
 COPY *.rpm /
 RUN rpm -Uh --nodeps /oracle-instantclient*.x86_64.rpm && rm /*.rpm
@@ -29,16 +29,20 @@ ENV VERSION ${VERSION:-0.1.0}
 COPY oracle-instantclient*basic*.rpm /
 
 RUN apk add libaio rpm && rpm -Uh --nodeps /oracle*rpm && rm -f /oracle*rpm
+COPY sgerrand.rsa.pub /etc/apk/keys/sgerrand.rsa.pub
+COPY glibc-2.29-r0.apk /tmp/glibc-2.29-r0.apk
+RUN apk add /tmp/glibc-2.29-r0.apk && rm -f /etc/apk/keys/sgerrand.rsa.pub /tmp/glibc-2.29-r0.apk
 
 ENV LD_LIBRARY_PATH /usr/lib/oracle/18.3/client64/lib
-RUN ldconfig $LD_LIBRARY_PATH
 
 COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
+COPY --from=build /lib/x86_64-linux-gnu/libgcc_s.so.1 /usr/glibc-compat/lib
+COPY --from=build /lib/x86_64-linux-gnu/libaio.so.1 /usr/glibc-compat/lib
 ADD ./default-metrics.toml /default-metrics.toml
 
 ENV DATA_SOURCE_NAME system/oracle@oracle/xe
 
-RUN cp -rp /usr/lib/oracle/18.3/client64/lib/* /usr/lib && chmod 755 /oracledb_exporter
+RUN chmod 755 /oracledb_exporter
 
 EXPOSE 9161
 
