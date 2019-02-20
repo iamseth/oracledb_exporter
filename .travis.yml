@@ -19,8 +19,8 @@ deploy:
     tags: true
 
 after_success:
-  docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
-  docker push iamseth/oracledb_exporter:${TRAVIS_TAG:-latest}
-  docker push iamseth/oracledb_exporter:latest
-  docker push iamseth/oracledb_exporter:${TRAVIS_TAG:-latest}-alpine
+  docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"           &&
+  docker push iamseth/oracledb_exporter:${TRAVIS_TAG:-latest}        &&
+  docker push iamseth/oracledb_exporter:latest                       &&
+  docker push iamseth/oracledb_exporter:${TRAVIS_TAG:-latest}-alpine &&
   docker push iamseth/oracledb_exporter:alpine
