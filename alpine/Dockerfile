@@ -28,13 +28,13 @@ ENV VERSION ${VERSION:-0.1.0}
 
 COPY oracle-instantclient*basic*.rpm /
 
-RUN apk add libaio rpm && rpm -Uh --nodeps /oracle*rpm && rm -f /oracle*rpm
 COPY sgerrand.rsa.pub /etc/apk/keys/sgerrand.rsa.pub
 COPY glibc-2.29-r0.apk /tmp/glibc-2.29-r0.apk
 RUN apk add /tmp/glibc-2.29-r0.apk && rm -f /etc/apk/keys/sgerrand.rsa.pub /tmp/glibc-2.29-r0.apk
 
 ENV LD_LIBRARY_PATH /usr/lib/oracle/18.3/client64/lib
 
+COPY --from=build $LD_LIBRARY_PATH $LD_LIBRARY_PATH
 COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
 COPY --from=build /lib/x86_64-linux-gnu/libgcc_s.so.1 /usr/glibc-compat/lib
 COPY --from=build /lib/x86_64-linux-gnu/libaio.so.1 /usr/glibc-compat/lib
