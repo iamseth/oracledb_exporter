@@ -53,7 +53,12 @@ You can run via Docker using an existing image. If you don't already have an Ora
 ```bash
 docker run -d --name oracle -p 1521:1521 wnameless/oracle-xe-11g:16.04
 docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@oracle/xe iamseth/oracledb_exporter
+```
 
+Since 0.2.1, the exporter image exist with Alpine flavor. Watch out for their use. It is for the moment a test.
+
+```bash
+docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@oracle/xe iamseth/oracledb_exporter:alpine
 ```
 
 ## Binary Release
