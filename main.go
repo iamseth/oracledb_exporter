@@ -166,8 +166,20 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	noop := func(row map[string]string) error { return nil }
 	if err = GeneratePrometheusMetrics(e.db, noop, "SELECT 1 FROM DUAL"); err != nil {
 		log.Errorln("Error pinging oracle:", err)
-		e.up.Set(0)
-		return
+		// Maybe Oracle instance was restarted => try to reconnect
+		// fix https://github.com/iamseth/oracledb_exporter/issues/32
+		log.Infoln("Try to reconnect...")
+		e.db, err = sql.Open("oci8", e.dsn)
+		if err != nil {
+			log.Errorln("Error while connecting to oracle:", err)
+			e.up.Set(0)
+			return
+		}
+		if err = GeneratePrometheusMetrics(e.db, noop, "SELECT 1 FROM DUAL"); err != nil {
+			log.Error("Unable to connect to oracle:", err)
+			e.up.Set(0)
+			return
+		}
 	}
 	e.up.Set(1)
 
