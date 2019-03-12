@@ -120,7 +120,7 @@ metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same 
 This file produce the following entries in the exporter:
 
 ```
-# HELP oracledb_test_value_1 Simple example returning always.
+# HELP oracledb_test_value_1 Simple example returning always 1.
 # TYPE oracledb_test_value_1 gauge
 oracledb_test_value_1 1
 # HELP oracledb_test_value_2 Same but returning always 2.
@@ -181,6 +181,18 @@ oracledb_test_value_1 1
 # HELP oracledb_test_value_2 Same test but returning always 2 as gauge.
 # TYPE oracledb_test_value_2 gauge
 oracledb_test_value_2 2
+```
+
+# Customize metrics in a docker image
+
+If you run the exporter as a docker image and want to customize the metrics, you can use the following example:
+
+```Dockerfile
+FROM iamseth/oracledb_exporter:latest
+
+COPY custom-metrics.toml /
+
+ENTRYPOINT ["/oracledb_exporter", "-custom.metrics", "/custom-metrics.toml"]
 ```
 
 # Integration with Grafana
