@@ -164,7 +164,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 	// Noop function for simple SELECT 1 FROM DUAL
 	noop := func(row map[string]string) error { return nil }
-	if err = GeneratePrometheusMetrics(e.db, noop, "SELECT 1 FROM DUAL"); err != nil {
+	if err = generatePrometheusMetrics(e.db, noop, "SELECT 1 FROM DUAL"); err != nil {
 		log.Errorln("Error pinging oracle:", err)
 		// Maybe Oracle instance was restarted => try to reconnect
 		// fix https://github.com/iamseth/oracledb_exporter/issues/32
@@ -175,7 +175,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 			e.up.Set(0)
 			return
 		}
-		if err = GeneratePrometheusMetrics(e.db, noop, "SELECT 1 FROM DUAL"); err != nil {
+		if err = generatePrometheusMetrics(e.db, noop, "SELECT 1 FROM DUAL"); err != nil {
 			log.Error("Unable to connect to oracle:", err)
 			e.up.Set(0)
 			return
@@ -192,7 +192,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 }
 
-func GetMetricType(metricType string, metricsType map[string]string) prometheus.ValueType {
+func getMetricType(metricType string, metricsType map[string]string) prometheus.ValueType {
 	var strToPromType = map[string]prometheus.ValueType{
 		"gauge":   prometheus.GaugeValue,
 		"counter": prometheus.CounterValue,
@@ -241,7 +241,7 @@ func scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 					metricHelp,
 					labels, nil,
 				)
-				ch <- prometheus.MustNewConstMetric(desc, GetMetricType(metric, metricsType), value, labelsValues...)
+				ch <- prometheus.MustNewConstMetric(desc, getMetricType(metric, metricsType), value, labelsValues...)
 				// If no labels, use metric name
 			} else {
 				desc := prometheus.NewDesc(
@@ -249,13 +249,13 @@ func scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 					metricHelp,
 					nil, nil,
 				)
-				ch <- prometheus.MustNewConstMetric(desc, GetMetricType(metric, metricsType), value)
+				ch <- prometheus.MustNewConstMetric(desc, getMetricType(metric, metricsType), value)
 			}
 			metricsCount++
 		}
 		return nil
 	}
-	err := GeneratePrometheusMetrics(db, genericParser, request)
+	err := generatePrometheusMetrics(db, genericParser, request)
 	if err != nil {
 		return err
 	}
@@ -267,7 +267,7 @@ func scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 
 // inspired by https://kylewbanks.com/blog/query-result-to-map-in-golang
 // Parse SQL result and call parsing function to each row
-func GeneratePrometheusMetrics(db *sql.DB, parse func(row map[string]string) error, query string) error {
+func generatePrometheusMetrics(db *sql.DB, parse func(row map[string]string) error, query string) error {
 
 	// Add a timeout
 	timeout, err := strconv.Atoi(*queryTimeout)
