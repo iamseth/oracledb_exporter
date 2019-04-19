@@ -55,7 +55,7 @@ type Metrics struct {
 
 // Metrics to scrape. Use external file (default-metrics.toml and custom if provided)
 var (
-	metricsToScrap    Metrics
+	metricsToScrape   Metrics
 	additionalMetrics Metrics
 )
 
@@ -111,7 +111,7 @@ func NewExporter(dsn string) *Exporter {
 	}
 }
 
-// Describe describes all the metrics exported by the MS SQL exporter.
+// Describe describes all the metrics exported by the exporter.
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	// We cannot know in advance what metrics the exporter will generate
 	// So we use the poor man's describe method: Run a collect
@@ -183,7 +183,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	}
 	e.up.Set(1)
 
-	for _, metric := range metricsToScrap.Metric {
+	for _, metric := range metricsToScrape.Metric {
 		if err = scrapeMetric(e.db, ch, metric); err != nil {
 			log.Errorln("Error scraping for", metric.Context, ":", err)
 			e.scrapeErrors.WithLabelValues(metric.Context).Inc()
@@ -340,7 +340,7 @@ func main() {
 	log.Infoln("Starting oracledb_exporter " + Version)
 	dsn := os.Getenv("DATA_SOURCE_NAME")
 	// Load default metrics
-	if _, err := toml.DecodeFile(*defaultFileMetrics, &metricsToScrap); err != nil {
+	if _, err := toml.DecodeFile(*defaultFileMetrics, &metricsToScrape); err != nil {
 		log.Errorln(err)
 		panic(errors.New("Error while loading " + *defaultFileMetrics))
 	}
@@ -351,7 +351,7 @@ func main() {
 			log.Errorln(err)
 			panic(errors.New("Error while loading " + *customMetrics))
 		}
-		metricsToScrap.Metric = append(metricsToScrap.Metric, additionalMetrics.Metric...)
+		metricsToScrape.Metric = append(metricsToScrape.Metric, additionalMetrics.Metric...)
 	}
 	exporter := NewExporter(dsn)
 	prometheus.MustRegister(exporter)
