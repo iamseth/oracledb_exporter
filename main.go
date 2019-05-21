@@ -16,7 +16,7 @@ import (
 	_ "github.com/mattn/go-oci8"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -311,8 +311,11 @@ func generatePrometheusMetrics(db *sql.DB, parse func(row map[string]string) err
 			switch (*val).(type) {
 			case float64:
 				m[strings.ToLower(colName)] = strconv.FormatFloat((*val).(float64), 'f', -1, 64)
-			default:
+			case string:
 				m[strings.ToLower(colName)] = (*val).(string)
+			default:
+				log.Errorf("Couldn't match a type for: %v (value: %v)", strings.ToLower(colName), *val)
+				continue
 			}
 		}
 		// Call function to parse row
