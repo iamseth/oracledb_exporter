@@ -16,7 +16,7 @@ import (
 	_ "github.com/mattn/go-oci8"
 
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+	"github.com/prometheus/common/log"
 )
 
 var (
