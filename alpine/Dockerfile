@@ -37,7 +37,7 @@ ENV LD_LIBRARY_PATH /usr/lib/oracle/18.3/client64/lib
 COPY --from=build $LD_LIBRARY_PATH $LD_LIBRARY_PATH
 COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
 COPY --from=build /lib/x86_64-linux-gnu/libgcc_s.so.1 /usr/glibc-compat/lib
-COPY --from=build /lib/x86_64-linux-gnu/libaio.so.1 /usr/glibc-compat/lib
+COPY --from=build /usr/lib/x86_64-linux-gnu/libaio.so.1 /usr/glibc-compat/lib
 ADD ./default-metrics.toml /default-metrics.toml
 
 ENV DATA_SOURCE_NAME system/oracle@oracle/xe
