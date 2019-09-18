@@ -72,7 +72,7 @@ In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle
 Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting. For Example
 
 ```bash
-export DATA_SOURCE_NAME=system/oracle@myhost
+export DATA_SOURCE_NAME=user/password@//myhost/service
 /path/to/binary -l log.level error -l web.listen-address 9161
 ```
 
