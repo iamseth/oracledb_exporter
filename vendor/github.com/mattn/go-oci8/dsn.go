@@ -42,8 +42,10 @@ const (
 	encodeQueryComponent
 )
 
+// EscapeError for invalid escape
 type EscapeError string
 
+// Error returns string for invalid URL escape
 func (e EscapeError) Error() string {
 	return "invalid URL escape " + strconv.Quote(string(e))
 }
@@ -214,6 +216,14 @@ func escape(s string, mode encoding) string {
 // If not, return s, "".
 func split(s string, c string) (string, string) {
 	i := strings.Index(s, c)
+	if i < 0 {
+		return s, ""
+	}
+	return s[:i], s[i+len(c):]
+}
+
+func splitRight(s string, c string) (string, string) {
+	i := strings.LastIndex(s, c)
 	if i < 0 {
 		return s, ""
 	}
