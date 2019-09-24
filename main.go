@@ -310,7 +310,7 @@ func GeneratePrometheusMetrics(db *sql.DB, parse func(row map[string]string) err
     m := make(map[string]string)
     for i, colName := range cols {
       val := columnPointers[i].(*interface{})
-      m[strings.ToLower(colName)] = (*val).(string)
+      m[strings.ToLower(colName)] = fmt.Sprintf("%v", *val)
     }
     // Call function to parse row
     if err := parse(m); err != nil {
