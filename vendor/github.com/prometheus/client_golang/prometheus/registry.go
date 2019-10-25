@@ -24,6 +24,8 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
+	"github.com/golang/protobuf/proto"
+	"github.com/prometheus/common/expfmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -31,9 +33,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-
-	"github.com/golang/protobuf/proto"
-	"github.com/prometheus/common/expfmt"
 
 	dto "github.com/prometheus/client_model/go"
 )
@@ -219,13 +218,19 @@ func (r *registry) Register(c Collector) (Collector, error) {
 		close(descChan)
 	}()
 
+	defer func() {
+		// Drain channel in case of premature return to not leak a goroutine.
+		for range descChan {
+		}
+		r.mtx.Unlock()
+	}()
+
 	newDescIDs := map[uint64]struct{}{}
 	newDimHashesByName := map[string]uint64{}
 	var collectorID uint64 // Just a sum of all desc IDs.
 	var duplicateDescErr error
 
 	r.mtx.Lock()
-	defer r.mtx.Unlock()
 	// Coduct various tests...
 	for desc := range descChan {
 
@@ -379,6 +384,7 @@ func (r *registry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "An error has occurred:\n\n"+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	if closer, ok := writer.(io.Closer); ok {
 		closer.Close()
 	}
@@ -389,6 +395,7 @@ func (r *registry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		header.Set(contentEncodingHeader, encoding)
 	}
 	w.Write(buf.Bytes())
+
 }
 
 func (r *registry) writePB(encoder expfmt.Encoder) error {
@@ -405,23 +412,15 @@ func (r *registry) writePB(encoder expfmt.Encoder) error {
 	// Scatter.
 	// (Collectors could be complex and slow, so we call them all at once.)
 	wg.Add(len(r.collectorsByID))
-	go func() {
-		wg.Wait()
-		close(metricChan)
-	}()
 	for _, collector := range r.collectorsByID {
 		go func(collector Collector) {
 			defer wg.Done()
 			collector.Collect(metricChan)
 		}(collector)
 	}
+	wg.Wait()
 	r.mtx.RUnlock()
-
-	// Drain metricChan in case of premature return.
-	defer func() {
-		for _ = range metricChan {
-		}
-	}()
+	close(metricChan)
 
 	// Gather.
 	for metric := range metricChan {

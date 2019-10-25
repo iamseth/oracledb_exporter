@@ -17,6 +17,10 @@ import (
 
   "github.com/prometheus/client_golang/prometheus"
   "github.com/prometheus/common/log"
+  "fmt"
+
+  //Required for debugging
+  //_ "net/http/pprof"
 )
 
 var (
@@ -72,6 +76,8 @@ type Exporter struct {
 // NewExporter returns a new Oracle DB exporter for the provided DSN.
 func NewExporter(dsn string) *Exporter {
   db, err := sql.Open("oci8", dsn)
+  db.SetMaxIdleConns(0)
+  db.SetMaxOpenConns(10)
   if err != nil {
     log.Errorln("Error while connecting to", dsn)
     panic(err)
@@ -162,28 +168,22 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
     }
   }(time.Now())
 
-  // Noop function for simple SELECT 1 FROM DUAL
-  noop := func(row map[string]string) error { return nil }
-  if err = GeneratePrometheusMetrics(e.db, noop, "SELECT 1 FROM DUAL"); err != nil {
-    log.Errorln("Error pinging oracle:", err)
-    // close old connection
-    e.db.Close()
-    // Maybe Oracle instance was restarted => try to reconnect
-    // fix https://github.com/iamseth/oracledb_exporter/issues/32
-    log.Infoln("Try to reconnect...")
-    e.db, err = sql.Open("oci8", e.dsn)
-    if err != nil {
-      log.Errorln("Error while connecting to oracle:", err)
-      e.up.Set(0)
-      return
-    }
-    if err = GeneratePrometheusMetrics(e.db, noop, "SELECT 1 FROM DUAL"); err != nil {
-      log.Error("Unable to connect to oracle:", err)
-      e.up.Set(0)
-      return
+  if err = e.db.Ping(); err != nil {
+    if strings.Contains(err.Error(), "sql: database is closed") {
+      log.Infoln("Reconnecting to DB")
+      e.db, err = sql.Open("oci8", e.dsn)
+      e.db.SetMaxIdleConns(0)
+      e.db.SetMaxOpenConns(10)
     }
   }
-  e.up.Set(1)
+  if err = e.db.Ping(); err != nil {
+    log.Errorln("Error pinging oracle:", err)
+    //e.db.Close()
+    e.up.Set(0)
+    return
+  } else {
+    e.up.Set(1)
+  }
 
   for _, metric := range metricsToScrap.Metric {
     if err = ScrapeMetric(e.db, ch, metric); err != nil {
@@ -310,7 +310,7 @@ func GeneratePrometheusMetrics(db *sql.DB, parse func(row map[string]string) err
     m := make(map[string]string)
     for i, colName := range cols {
       val := columnPointers[i].(*interface{})
-      m[strings.ToLower(colName)] = (*val).(string)
+      m[strings.ToLower(colName)] = fmt.Sprintf("%v", *val)
     }
     // Call function to parse row
     if err := parse(m); err != nil {
