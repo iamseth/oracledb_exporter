@@ -1,0 +1,7 @@
+libdir=/usr/lib/oracle/@ORACLE_VERSION@/client64/lib
+includedir=/usr/include/oracle/@ORACLE_VERSION@/client64
+Name: oci8
+Description: oci8 library
+Version: @ORACLE_VERSION@
+Cflags: -I${includedir}
+Libs: -L${libdir} -lclntsh

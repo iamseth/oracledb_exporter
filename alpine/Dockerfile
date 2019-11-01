@@ -1,10 +1,13 @@
 FROM golang:1.11 AS build
 
-ENV LD_LIBRARY_PATH /usr/lib/oracle/18.3/client64/lib
+ARG ORACLE_VERSION
+ENV ORACLE_VERSION "${ORACLE_VERSION}"
+ENV LD_LIBRARY_PATH "/usr/lib/oracle/${ORACLE_VERSION}/client64/lib"
 
 RUN apt-get -qq update && apt-get install --no-install-recommends -qq libaio1 rpm libgcc1
-COPY oci8.pc /usr/share/pkgconfig
-COPY *.rpm /
+COPY oci8.pc.template /usr/share/pkgconfig/oci8.pc
+RUN sed -i "s/@ORACLE_VERSION@/$ORACLE_VERSION/g" /usr/share/pkgconfig/oci8.pc
+COPY oracle*${ORACLE_VERSION}*.rpm /
 RUN rpm -Uh --nodeps /oracle-instantclient*.x86_64.rpm && rm /*.rpm
 RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
 
@@ -26,11 +29,10 @@ LABEL maintainer="Yannig Perré <yannig.perre@gmail.com>"
 
 ENV VERSION ${VERSION:-0.1.0}
 
-COPY oracle-instantclient*basic*.rpm /
-
 RUN apk add libaio
 
-ENV LD_LIBRARY_PATH /usr/lib/oracle/18.3/client64/lib
+ENV LD_LIBRARY_PATH "/usr/lib/oracle/${ORACLE_VERSION}/client64/lib"
+RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
 
 COPY --from=build $LD_LIBRARY_PATH $LD_LIBRARY_PATH
 COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
