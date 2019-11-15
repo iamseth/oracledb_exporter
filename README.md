@@ -11,7 +11,7 @@
 [Running](#running)  
 [Grafana](#grafana)  
 [Troubleshooting](#troubleshooting)  
-
+[Operating principles](operating-principles.md)
 
 # Description
 
