@@ -117,7 +117,7 @@ func NewExporter(dsn string) *Exporter {
   }
 }
 
-// Describe describes all the metrics exported by the MS SQL exporter.
+// Describe describes all the metrics exported by the Oracle DB exporter.
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
   // We cannot know in advance what metrics the exporter will generate
   // So we use the poor man's describe method: Run a collect
