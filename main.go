@@ -234,6 +234,8 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
       value, err := strconv.ParseFloat(strings.TrimSpace(row[metric]), 64)
       // If not a float, skip current metric
       if err != nil {
+        log.Errorln("Unable to convert current value to float (metric=" + metric +
+                    ",metricHelp=" + metricHelp + ",value=<" + row[metric] + ">)")
         continue
       }
       // If metric do not use a field content in metric's name
