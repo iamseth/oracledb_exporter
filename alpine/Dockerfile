@@ -31,12 +31,12 @@ ENV VERSION ${VERSION:-0.1.0}
 
 RUN apk add libaio
 
-ENV LD_LIBRARY_PATH "/usr/lib/oracle/${ORACLE_VERSION}/client64/lib"
-RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
-
 COPY --from=build $LD_LIBRARY_PATH $LD_LIBRARY_PATH
 COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
 ADD ./default-metrics.toml /default-metrics.toml
+
+ENV LD_LIBRARY_PATH "/usr/lib/oracle/${ORACLE_VERSION}/client64/lib"
+RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
 
 ENV DATA_SOURCE_NAME system/oracle@oracle/xe
 
