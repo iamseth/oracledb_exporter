@@ -73,7 +73,7 @@ alpine-image: $(ORA_RPM) sgerrand.rsa.pub glibc-2.29-r0.apk
 	docker build -f alpine/Dockerfile $(BUILD_ARGS) -t "iamseth/oracledb_exporter:$(VERSION)-alpine" .
 	docker tag "iamseth/oracledb_exporter:$(VERSION)-alpine" "iamseth/oracledb_exporter:alpine"
 
-travis: prereq deps test linux darwin docker
+travis: oci.pc prereq deps test linux darwin docker
 	@true
 
 .PHONY: build deps test clean docker travis oci.pc
