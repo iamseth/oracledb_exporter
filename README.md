@@ -72,8 +72,12 @@ In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle
 Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting. For Example
 
 ```bash
-export DATA_SOURCE_NAME=system/oracle@myhost
-/path/to/binary -l log.level error -l web.listen-address 9161
+# export Oracle location:
+export DATA_SOURCE_NAME=system/password@oracle-sid
+# or using a complete url:
+export DATA_SOURCE_NAME=user/password@//myhost:1521/service
+# Then run the exporter
+/path/to/binary/oracledb_exporter -l log.level error -l web.listen-address 9161
 ```
 
 ## Usage
