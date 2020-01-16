@@ -26,12 +26,12 @@ import (
 var (
   // Version will be set at build time.
   Version       = "0.0.0.dev"
-  listenAddress = flag.String("web.listen-address", ":9161", "Address to listen on for web interface and telemetry.")
-  metricPath    = flag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
+  listenAddress = flag.String("web.listen-address", getEnv("LISTEN_ADDRESS", ":9161"), "Address to listen on for web interface and telemetry. (env: LISTEN_ADDRESS)")
+  metricPath    = flag.String("web.telemetry-path", getEnv("TELEMETRY_PATH", "/metrics"), "Path under which to expose metrics. (env: TELEMETRY_PATH)")
   landingPage   = []byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>")
-  defaultFileMetrics = flag.String("default.metrics", "default-metrics.toml", "File with default metrics in a TOML file.")
-  customMetrics = flag.String("custom.metrics", os.Getenv("CUSTOM_METRICS"), "File that may contain various custom metrics in a TOML file.")
-  queryTimeout  = flag.String("query.timeout", "5", "Query timeout (in seconds).")
+  defaultFileMetrics = flag.String("default.metrics", getEnv("DEFAULT_METRICS", "default-metrics.toml"), "File with default metrics in a TOML file. (env: DEFAULT_METRICS)")
+  customMetrics = flag.String("custom.metrics", getEnv("CUSTOM_METRICS", ""), "File that may contain various custom metrics in a TOML file. (env: CUSTOM_METRICS)")
+  queryTimeout  = flag.String("query.timeout", getEnv("QUERY_TIMEOUT", "5"), "Query timeout (in seconds). (env: QUERY_TIMEOUT)")
 )
 
 // Metric name parts.
@@ -71,6 +71,14 @@ type Exporter struct {
   up              prometheus.Gauge
   db              *sql.DB
 
+}
+
+// getEnv returns the value of an environment variable, or returns the provided fallback value
+func getEnv(key, fallback string) string {
+  if value, ok := os.LookupEnv(key); ok {
+    return value
+  }
+  return fallback
 }
 
 // NewExporter returns a new Oracle DB exporter for the provided DSN.
