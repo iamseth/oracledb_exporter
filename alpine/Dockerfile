@@ -35,6 +35,8 @@ COPY --from=build $LD_LIBRARY_PATH $LD_LIBRARY_PATH
 COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
 ADD ./default-metrics.toml /default-metrics.toml
 
+ARG ORACLE_VERSION
+ENV ORACLE_VERSION=${ORACLE_VERSION}
 ENV LD_LIBRARY_PATH "/usr/lib/oracle/${ORACLE_VERSION}/client64/lib"
 RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
 

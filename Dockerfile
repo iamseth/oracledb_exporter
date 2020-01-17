@@ -1,7 +1,7 @@
 FROM golang:1.11 AS build
 
 ARG ORACLE_VERSION
-ENV ORACLE_VERSION "${ORACLE_VERSION}"
+ENV ORACLE_VERSION=${ORACLE_VERSION}
 ENV LD_LIBRARY_PATH "/usr/lib/oracle/${ORACLE_VERSION}/client64/lib"
 
 RUN apt-get -qq update && apt-get install --no-install-recommends -qq libaio1 rpm
@@ -35,6 +35,8 @@ RUN apt-get -qq update && \
     apt-get -qq install --no-install-recommends -qq libaio1 rpm -y && rpm -Uvh --nodeps /oracle*${ORACLE_VERSION}*rpm && \
     rm -f /oracle*rpm
 
+ARG ORACLE_VERSION
+ENV ORACLE_VERSION=${ORACLE_VERSION}
 ENV LD_LIBRARY_PATH "/usr/lib/oracle/${ORACLE_VERSION}/client64/lib"
 RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
 
