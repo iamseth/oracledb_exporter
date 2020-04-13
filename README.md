@@ -206,6 +206,19 @@ An example Grafana dashboard is available [here](https://grafana.com/dashboards/
 
 # Troubleshooting
 
+## error while loading shared libraries: libclntsh.so.xx.x: cannot open shared object file: No such file or directory
+
+This exporter use libs from Oracle in order to connect to Oracle Database. If you are running the binary version, you
+must install the Oracle binaries somewhere on your machine.
+
+An alternative is to run this exporter using a Docker container. This way, you don't have to worry about Oracle binaries
+version as they are embedded in the container.
+
+Here an example to run this exporter (to scrap metrics from system/oracle@//host:1521/service-or-sid) and bind the exporter port (9161) to the global machine:
+
+```docker run -it --rm -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@//host:1521/service-or-sid iamseth/oracledb_exporter:0.2.6a```
+
+
 ## Error scraping for wait_time
 
 If you experience an error `Error scraping for wait_time: sql: Scan error on column index 1: converting driver.Value type string (",01") to a float64: invalid syntax source="main.go:144"` you may need to set the NLS_LANG variable.
