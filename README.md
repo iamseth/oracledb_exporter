@@ -209,7 +209,8 @@ An example Grafana dashboard is available [here](https://grafana.com/dashboards/
 ## error while loading shared libraries: libclntsh.so.xx.x: cannot open shared object file: No such file or directory
 
 This exporter use libs from Oracle in order to connect to Oracle Database. If you are running the binary version, you
-must install the Oracle binaries somewhere on your machine.
+must install the Oracle binaries somewhere on your machine and **you must install the good version number**. If the
+error talk about the version 18.3, you **must** install 18.3 binary version. If it's 12.2, you **must** install 12.2.
 
 An alternative is to run this exporter using a Docker container. This way, you don't have to worry about Oracle binaries
 version as they are embedded in the container.
