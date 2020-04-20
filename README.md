@@ -96,6 +96,10 @@ Usage of oracledb_exporter:
        	Address to listen on for web interface and telemetry. (default ":9161")
   -web.telemetry-path string
        	Path under which to expose metrics. (default "/metrics")
+  -database.maxIdleConns string
+        Number of maximum idle connections in the connection pool. (default "0")
+  -database.maxOpenConns string
+        Number of maximum open connections in the connection pool. (default "10")
 ```
 
 # Default metrics
