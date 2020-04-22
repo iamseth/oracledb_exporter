@@ -90,6 +90,7 @@ func NewExporter(dsn string) *Exporter {
 		log.Errorln("Error while connecting to", dsn)
 		panic(err)
 	}
+   log.Debugln("Successfully connected to: ", dsn)
 	return &Exporter{
 		dsn: dsn,
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -190,13 +191,35 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		e.up.Set(0)
 		return
 	} else {
+	   log.Debugln("Successfully pinged Oracle database: ")
 		e.up.Set(1)
 	}
 
 	for _, metric := range metricsToScrap.Metric {
+	   log.Debugln("About to scrape metric: ")
+	   log.Debugln("- Metric MetricsDesc: ", metric.MetricsDesc)
+	   log.Debugln("- Metric Context: ", metric.Context)
+	   log.Debugln("- Metric MetricsType: ", metric.MetricsType)
+  	   log.Debugln("- Metric Labels: ", metric.Labels)
+  	   log.Debugln("- Metric FieldToAppend: ", metric.FieldToAppend)
+  	   log.Debugln("- Metric IgnoreZeroResult: ", metric.IgnoreZeroResult)  	         	   	   
+	   log.Debugln("- Metric Request: ", metric.Request)
+	   
+      if len(metric.Request) == 0 {
+         log.Errorln("Error scraping for ", metric.MetricsDesc, ". Did you forget to define request in your toml file?")
+         continue	   
+	   }
+ 
+      if len(metric.MetricsDesc) == 0 {
+         log.Errorln("Error scraping for query", metric.Request, ". Did you forget to define metricsdesc  in your toml file?")
+         continue	   
+	   }	   
+	   
 		if err = ScrapeMetric(e.db, ch, metric); err != nil {
-			log.Errorln("Error scraping for", metric.Context, ":", err)
+			log.Errorln("Error scraping for", metric.Context, "_", metric.MetricsDesc, ":", err)
 			e.scrapeErrors.WithLabelValues(metric.Context).Inc()
+		} else {
+    		log.Debugln("Successfully scrapped metric: ", metric.Context)
 		}
 	}
 
@@ -221,6 +244,7 @@ func GetMetricType(metricType string, metricsType map[string]string) prometheus.
 
 // interface method to call ScrapeGenericValues using Metric struct values
 func ScrapeMetric(db *sql.DB, ch chan<- prometheus.Metric, metricDefinition Metric) error {
+   log.Debugln("Calling function ScrapeGenericValues()")
 	return ScrapeGenericValues(db, ch, metricDefinition.Context, metricDefinition.Labels,
 		metricDefinition.MetricsDesc, metricDefinition.MetricsType,
 		metricDefinition.FieldToAppend, metricDefinition.IgnoreZeroResult,
@@ -246,6 +270,7 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 					",metricHelp=" + metricHelp + ",value=<" + row[metric] + ">)")
 				continue
 			}
+		   log.Debugln("Query result looks like: ", value)
 			// If metric do not use a field content in metric's name
 			if strings.Compare(fieldToAppend, "") == 0 {
 				desc := prometheus.NewDesc(
@@ -268,6 +293,7 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 		return nil
 	}
 	err := GeneratePrometheusMetrics(db, genericParser, request)
+	log.Debugln("ScrapeGenericValues() - metricsCount: ", metricsCount)
 	if err != nil {
 		return err
 	}
@@ -350,6 +376,8 @@ func main() {
 	if _, err := toml.DecodeFile(*defaultFileMetrics, &metricsToScrap); err != nil {
 		log.Errorln(err)
 		panic(errors.New("Error while loading " + *defaultFileMetrics))
+	} 	else {
+	   log.Infoln("Successfully loaded default metrics from: " + *defaultFileMetrics)
 	}
 
 	// If custom metrics, load it
@@ -357,8 +385,13 @@ func main() {
 		if _, err := toml.DecodeFile(*customMetrics, &additionalMetrics); err != nil {
 			log.Errorln(err)
 			panic(errors.New("Error while loading " + *customMetrics))
-		}
+		} else {
+	     log.Infoln("Successfully loaded custom metrics from: " + *customMetrics)
+	   }
+
 		metricsToScrap.Metric = append(metricsToScrap.Metric, additionalMetrics.Metric...)
+	} else {
+     log.Infoln("No custom metrics defined.")	
 	}
 	exporter := NewExporter(dsn)
 	prometheus.MustRegister(exporter)
