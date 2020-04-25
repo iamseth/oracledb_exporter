@@ -25,15 +25,15 @@ import (
 
 var (
 	// Version will be set at build time.
-	Version              = "0.0.0.dev"
-	listenAddress        = flag.String("web.listen-address", getEnv("LISTEN_ADDRESS", ":9161"), "Address to listen on for web interface and telemetry. (env: LISTEN_ADDRESS)")
-	metricPath           = flag.String("web.telemetry-path", getEnv("TELEMETRY_PATH", "/metrics"), "Path under which to expose metrics. (env: TELEMETRY_PATH)")
-	landingPage          = []byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>")
-	defaultFileMetrics   = flag.String("default.metrics", getEnv("DEFAULT_METRICS", "default-metrics.toml"), "File with default metrics in a TOML file. (env: DEFAULT_METRICS)")
-	customMetrics        = flag.String("custom.metrics", getEnv("CUSTOM_METRICS", ""), "File that may contain various custom metrics in a TOML file. (env: CUSTOM_METRICS)")
-	queryTimeout         = flag.String("query.timeout", getEnv("QUERY_TIMEOUT", "5"), "Query timeout (in seconds). (env: QUERY_TIMEOUT)")
-	databaseMaxIdleConns = flag.String("database.maxIdleConns", getEnv("DATABASE_MAXIDLECONNS", "0"), "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)")
-	databaseMaxOpenConns = flag.String("database.maxOpenConns", getEnv("DATABASE_MAXOPENCONNS", "10"), "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)")
+	Version            = "0.0.0.dev"
+	listenAddress      = flag.String("web.listen-address", getEnv("LISTEN_ADDRESS", ":9161"), "Address to listen on for web interface and telemetry. (env: LISTEN_ADDRESS)")
+	metricPath         = flag.String("web.telemetry-path", getEnv("TELEMETRY_PATH", "/metrics"), "Path under which to expose metrics. (env: TELEMETRY_PATH)")
+	landingPage        = []byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>")
+	defaultFileMetrics = flag.String("default.metrics", getEnv("DEFAULT_METRICS", "default-metrics.toml"), "File with default metrics in a TOML file. (env: DEFAULT_METRICS)")
+	customMetrics      = flag.String("custom.metrics", getEnv("CUSTOM_METRICS", ""), "File that may contain various custom metrics in a TOML file. (env: CUSTOM_METRICS)")
+	queryTimeout       = flag.String("query.timeout", getEnv("QUERY_TIMEOUT", "5"), "Query timeout (in seconds). (env: QUERY_TIMEOUT)")
+	maxIdleConns       = flag.Int("database.maxIdleConns", atoi(getEnv("DATABASE_MAXIDLECONNS", "0")), "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)")
+	maxOpenConns       = flag.Int("database.maxOpenConns", atoi(getEnv("DATABASE_MAXOPENCONNS", "10")), "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)")
 )
 
 // Metric name parts.
@@ -82,26 +82,33 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// NewExporter returns a new Oracle DB exporter for the provided DSN.
-func NewExporter(dsn string) *Exporter {
+func atoi(stringValue string) int {
+	intValue, err := strconv.Atoi(stringValue)
+	if err != nil {
+		log.Fatal("error while converting to int:", err)
+		panic(err)
+	}
+	return intValue
+}
+
+func connect(dsn string) *sql.DB {
+	log.Debugln("Launching connection: ", dsn)
 	db, err := sql.Open("oci8", dsn)
-	maxIdleConns, err := strconv.Atoi(*databaseMaxIdleConns)
-	if err != nil {
-		log.Fatal("error while converting maxIdleConns option value: ", err)
-		panic(err)
-	}
-	maxOpenConns, err := strconv.Atoi(*databaseMaxOpenConns)
-	if err != nil {
-		log.Fatal("error while converting maxOpenConns option value: ", err)
-		panic(err)
-	}
-	db.SetMaxIdleConns(maxIdleConns)
-	db.SetMaxOpenConns(maxOpenConns)
 	if err != nil {
 		log.Errorln("Error while connecting to", dsn)
 		panic(err)
 	}
+	log.Debugln("set max idle connections to ", *maxIdleConns)
+	db.SetMaxIdleConns(*maxIdleConns)
+	log.Debugln("set max open connections to ", *maxOpenConns)
+	db.SetMaxOpenConns(*maxOpenConns)
 	log.Debugln("Successfully connected to: ", dsn)
+	return db
+}
+
+// NewExporter returns a new Oracle DB exporter for the provided DSN.
+func NewExporter(dsn string) *Exporter {
+	db := connect(dsn)
 	return &Exporter{
 		dsn: dsn,
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -191,19 +198,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	if err = e.db.Ping(); err != nil {
 		if strings.Contains(err.Error(), "sql: database is closed") {
 			log.Infoln("Reconnecting to DB")
-			e.db, err = sql.Open("oci8", e.dsn)
-			maxIdleConns, err := strconv.Atoi(*databaseMaxIdleConns)
-			if err != nil {
-				log.Fatal("error while converting maxIdleConns option value: ", err)
-				panic(err)
-			}
-			maxOpenConns, err := strconv.Atoi(*databaseMaxOpenConns)
-			if err != nil {
-				log.Fatal("error while converting maxOpenConns option value: ", err)
-				panic(err)
-			}
-			e.db.SetMaxIdleConns(maxIdleConns)
-			e.db.SetMaxOpenConns(maxOpenConns)
+			e.db = connect(e.dsn)
 		}
 	}
 	if err = e.db.Ping(); err != nil {
