@@ -380,6 +380,7 @@ func cleanName(s string) string {
 	s = strings.Replace(s, "(", "", -1)  // Remove open parenthesis
 	s = strings.Replace(s, ")", "", -1)  // Remove close parenthesis
 	s = strings.Replace(s, "/", "", -1)  // Remove forward slashes
+	s = strings.Replace(s, "*", "", -1)  // Remove asterisks
 	s = strings.ToLower(s)
 	return s
 }
