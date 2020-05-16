@@ -207,6 +207,31 @@ ENTRYPOINT ["/oracledb_exporter", "-custom.metrics", "/custom-metrics.toml"]
 
 An example Grafana dashboard is available [here](https://grafana.com/dashboards/3333).
 
+# Build
+
+## Docker build
+
+To build Ubuntu and Alpine image, run the following command:
+
+    make docker
+
+You can also build only Ubuntu image:
+
+    make ubuntu-image
+
+Or Alpine:
+
+    make alpine-image
+
+## Binaries
+
+Retrieve Oracle RPMs (version 18.5):
+
+    make download-rpms
+
+Then run build:
+
+    make linux
 
 # Troubleshooting
 
