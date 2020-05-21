@@ -77,7 +77,7 @@ export DATA_SOURCE_NAME=system/password@oracle-sid
 # or using a complete url:
 export DATA_SOURCE_NAME=user/password@//myhost:1521/service
 # Then run the exporter
-/path/to/binary/oracledb_exporter -l log.level error -l web.listen-address 9161
+/path/to/binary/oracledb_exporter -log.level error -web.listen-address 0.0.0.0:9161
 ```
 
 ## Usage
