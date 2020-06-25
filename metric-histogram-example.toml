@@ -1,0 +1,18 @@
+[[metric]]
+context = "test_histo"
+request = "SELECT 'firstlabel' as label1, 'secondlabel' as label2, 3 as le_20, 19 as le_40, 31 as le_60, 40 as le_80, 45 as count, 123.45 as data FROM DUAL"
+metricsdesc = { data = "Histogram - sum total of all values in the data field." }
+metricstype = { data = "histogram" }
+labels = [ "label1", "label2" ]
+metricsbuckets = { data = { le_20 = "20", le_40 = "40", le_60 = "60", le_80 = "80" } }
+
+# # Yields metrics as follows:
+# # HELP oracledb_test_histo_data Histogram - sum total of all values in the data field.
+# # TYPE oracledb_test_histo_data histogram
+# oracledb_test_histo_data_bucket{label1="firstlabel",label2="secondlabel",le="20"} 3
+# oracledb_test_histo_data_bucket{label1="firstlabel",label2="secondlabel",le="40"} 19
+# oracledb_test_histo_data_bucket{label1="firstlabel",label2="secondlabel",le="60"} 31
+# oracledb_test_histo_data_bucket{label1="firstlabel",label2="secondlabel",le="80"} 40
+# oracledb_test_histo_data_bucket{label1="firstlabel",label2="secondlabel",le="+Inf"} 45
+# oracledb_test_histo_data_sum{label1="firstlabel",label2="secondlabel"} 123.45
+# oracledb_test_histo_data_count{label1="firstlabel",label2="secondlabel"} 45

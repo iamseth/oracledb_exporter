@@ -242,7 +242,15 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 				return
 			}
 
-			// FIXME - Should check that a MetricBuckets entry exists for everything of Histogram type
+			for column, metricType := range metric.MetricsType {
+				if metricType == "histogram" {
+					_, ok := metric.MetricsBuckets[column]
+					if ! ok {
+						log.Errorln("Unable to find MetricsBuckets configuration key for metric. (metric=" + column + ")")
+						return
+					}
+				}
+			}
 
 			if err = ScrapeMetric(e.db, ch, metric); err != nil {
 				log.Errorln("Error scraping for", metric.Context, "_", metric.MetricsDesc, ":", err)
