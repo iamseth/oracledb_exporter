@@ -3,6 +3,7 @@ module github.com/iamseth/oracledb_exporter
 go 1.14
 
 require (
+	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	github.com/BurntSushi/toml v0.3.1
 	github.com/beorn7/perks v1.0.0
 	github.com/golang/protobuf v1.3.1

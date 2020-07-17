@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"flag"
 	"net/http"
 	"os"
 	"strconv"
@@ -20,6 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
+	"gopkg.in/alecthomas/kingpin.v2"
 	//Required for debugging
 	//_ "net/http/pprof"
 )
@@ -27,14 +27,14 @@ import (
 var (
 	// Version will be set at build time.
 	Version            = "0.0.0.dev"
-	listenAddress      = flag.String("web.listen-address", getEnv("LISTEN_ADDRESS", ":9161"), "Address to listen on for web interface and telemetry. (env: LISTEN_ADDRESS)")
-	metricPath         = flag.String("web.telemetry-path", getEnv("TELEMETRY_PATH", "/metrics"), "Path under which to expose metrics. (env: TELEMETRY_PATH)")
+	listenAddress      = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry. (env: LISTEN_ADDRESS)").Default(getEnv("LISTEN_ADDRESS", ":9161")).String()
+	metricPath         = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics. (env: TELEMETRY_PATH)").Default(getEnv("TELEMETRY_PATH", "/metrics")).String()
 	landingPage        = []byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>")
-	defaultFileMetrics = flag.String("default.metrics", getEnv("DEFAULT_METRICS", "default-metrics.toml"), "File with default metrics in a TOML file. (env: DEFAULT_METRICS)")
-	customMetrics      = flag.String("custom.metrics", getEnv("CUSTOM_METRICS", ""), "File that may contain various custom metrics in a TOML file. (env: CUSTOM_METRICS)")
-	queryTimeout       = flag.String("query.timeout", getEnv("QUERY_TIMEOUT", "5"), "Query timeout (in seconds). (env: QUERY_TIMEOUT)")
-	maxIdleConns       = flag.Int("database.maxIdleConns", atoi(getEnv("DATABASE_MAXIDLECONNS", "0")), "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)")
-	maxOpenConns       = flag.Int("database.maxOpenConns", atoi(getEnv("DATABASE_MAXOPENCONNS", "10")), "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)")
+	defaultFileMetrics = kingpin.Flag("default.metrics", "File with default metrics in a TOML file. (env: DEFAULT_METRICS)").Default(getEnv("DEFAULT_METRICS", "default-metrics.toml")).String()
+	customMetrics      = kingpin.Flag("custom.metrics", "File that may contain various custom metrics in a TOML file. (env: CUSTOM_METRICS)").Default(getEnv("CUSTOM_METRICS", "")).String()
+	queryTimeout       = kingpin.Flag("query.timeout", "Query timeout (in seconds). (env: QUERY_TIMEOUT)").Default(getEnv("QUERY_TIMEOUT", "5")).String()
+	maxIdleConns       = kingpin.Flag("database.maxIdleConns", "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)").Default(getEnv("DATABASE_MAXIDLECONNS", "0")).Int()
+	maxOpenConns       = kingpin.Flag("database.maxOpenConns", "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)").Default(getEnv("DATABASE_MAXOPENCONNS", "10")).Int()
 )
 
 // Metric name parts.
@@ -387,7 +387,11 @@ func cleanName(s string) string {
 }
 
 func main() {
-	flag.Parse()
+	log.AddFlags(kingpin.CommandLine)
+	kingpin.Version("oracledb_exporter " + Version)
+	kingpin.HelpFlag.Short('h')
+	kingpin.Parse()
+
 	log.Infoln("Starting oracledb_exporter " + Version)
 	dsn := os.Getenv("DATA_SOURCE_NAME")
 	// Load default metrics
