@@ -77,28 +77,28 @@ export DATA_SOURCE_NAME=system/password@oracle-sid
 # or using a complete url:
 export DATA_SOURCE_NAME=user/password@//myhost:1521/service
 # Then run the exporter
-/path/to/binary/oracledb_exporter -log.level error -web.listen-address 0.0.0.0:9161
+/path/to/binary/oracledb_exporter --log.level error -web.listen-address 0.0.0.0:9161
 ```
 
 ## Usage
 
 ```bash
 Usage of oracledb_exporter:
-  -log.format value
+  --log.format value
        	If set use a syslog logger or JSON logging. Example: logger:syslog?appname=bob&local=7 or logger:stdout?json=true. Defaults to stderr.
-  -log.level value
+  --log.level value
        	Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal].
-  -custom.metrics string
+  --custom.metrics string
         File that may contain various custom metrics in a TOML file.
-  -default.metrics string
+  --default.metrics string
         Default TOML file metrics.
-  -web.listen-address string
+  --web.listen-address string
        	Address to listen on for web interface and telemetry. (default ":9161")
-  -web.telemetry-path string
+  --web.telemetry-path string
        	Path under which to expose metrics. (default "/metrics")
-  -database.maxIdleConns string
+  --database.maxIdleConns string
         Number of maximum idle connections in the connection pool. (default "0")
-  -database.maxOpenConns string
+  --database.maxOpenConns string
         Number of maximum open connections in the connection pool. (default "10")
 ```
 
@@ -109,7 +109,7 @@ This exporter comes with a set of default metrics defined in **default-metrics.t
 # Custom metrics
 
 This exporter does not have the metrics you want? You can provide new one using TOML file. To specify this file to the exporter, you can:
-- Use ``-custom.metrics`` flag followed by the TOML file
+- Use ``--custom.metrics`` flag followed by the TOML file
 - Export CUSTOM_METRICS variable environment (``export CUSTOM_METRICS=my-custom-metrics.toml``)
 
 This file must contain the following elements:
@@ -200,7 +200,7 @@ FROM iamseth/oracledb_exporter:latest
 
 COPY custom-metrics.toml /
 
-ENTRYPOINT ["/oracledb_exporter", "-custom.metrics", "/custom-metrics.toml"]
+ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
 
 # Integration with Grafana
@@ -251,7 +251,7 @@ request="SELECT resource_name,current_utilization,CASE WHEN TRIM(limit_value) LI
 
 If the value of limite_value is 'UNLIMITED', the request send back the value -1.
 
-You can increase the log level (`-log.level debug`) in order to get the statement generating this error.
+You can increase the log level (`--log.level debug`) in order to get the statement generating this error.
 
 ## error while loading shared libraries: libclntsh.so.xx.x: cannot open shared object file: No such file or directory
 
