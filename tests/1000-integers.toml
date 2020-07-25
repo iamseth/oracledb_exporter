@@ -1,0 +1,12 @@
+[[metric]]
+context = "integers"
+labels = [ "value" ]
+metricsdesc = { value= "Gauge metric integers counting up." }
+request = '''
+select value
+from   dual
+model
+  dimension by ( 0 as key )
+  measures     ( 0 as value )
+  rules upsert ( value[ for key from 1 to 1000 increment 1 ] = cv(key) )
+'''
