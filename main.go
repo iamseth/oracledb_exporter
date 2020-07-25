@@ -414,14 +414,15 @@ func main() {
 
 	// If custom metrics, load it
 	if strings.Compare(*customMetrics, "") != 0 {
-		if _, err := toml.DecodeFile(*customMetrics, &additionalMetrics); err != nil {
-			log.Errorln(err)
-			panic(errors.New("Error while loading " + *customMetrics))
-		} else {
-			log.Infoln("Successfully loaded custom metrics from: " + *customMetrics)
+		for _, _customMetrics := range strings.Split(*customMetrics, ",") {
+			if _, err := toml.DecodeFile(_customMetrics, &additionalMetrics); err != nil {
+				log.Errorln(err)
+				panic(errors.New("Error while loading " + _customMetrics))
+			} else {
+				log.Infoln("Successfully loaded custom metrics from: " + _customMetrics)
+			}
+			metricsToScrap.Metric = append(metricsToScrap.Metric, additionalMetrics.Metric...)
 		}
-
-		metricsToScrap.Metric = append(metricsToScrap.Metric, additionalMetrics.Metric...)
 	} else {
 		log.Infoln("No custom metrics defined.")
 	}
