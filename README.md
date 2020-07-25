@@ -65,11 +65,12 @@ docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE
 
 Pre-compiled versions for Linux 64 bit and Mac OSX 64 bit can be found under [releases](https://github.com/iamseth/oracledb_exporter/releases).
 
-In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html) for your operating system. Only the basic version is required for execution.
+In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html)
+for your operating system. Only the basic version is required for execution.
 
 # Running
 
-Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting. For Example
+Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting. For Example:
 
 ```bash
 # export Oracle location:
@@ -77,7 +78,7 @@ export DATA_SOURCE_NAME=system/password@oracle-sid
 # or using a complete url:
 export DATA_SOURCE_NAME=user/password@//myhost:1521/service
 # Then run the exporter
-/path/to/binary/oracledb_exporter --log.level error -web.listen-address 0.0.0.0:9161
+/path/to/binary/oracledb_exporter --log.level error --web.listen-address 0.0.0.0:9161
 ```
 
 ## Usage
@@ -104,11 +105,13 @@ Usage of oracledb_exporter:
 
 # Default metrics
 
-This exporter comes with a set of default metrics defined in **default-metrics.toml**. You can modify this file or provide a different one using ``default.metrics`` option.
+This exporter comes with a set of default metrics defined in **default-metrics.toml**. You can modify this file or
+provide a different one using ``default.metrics`` option.
 
 # Custom metrics
 
-This exporter does not have the metrics you want? You can provide new one using TOML file. To specify this file to the exporter, you can:
+This exporter does not have the metrics you want? You can provide new one using TOML file. To specify this file to the
+exporter, you can:
 - Use ``--custom.metrics`` flag followed by the TOML file
 - Export CUSTOM_METRICS variable environment (``export CUSTOM_METRICS=my-custom-metrics.toml``)
 
@@ -275,7 +278,7 @@ If you experience an error `Error scraping for wait_time: sql: Scan error on col
 
 export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1
 export DATA_SOURCE_NAME=system/oracle@myhost
-/path/to/binary -l log.level error -l web.listen-address 9161
+/path/to/binary --log.level error --web.listen-address 9161
 ```
 
 If using Docker, set the same variable using the -e flag.
