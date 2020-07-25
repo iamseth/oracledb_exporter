@@ -81,6 +81,32 @@ export DATA_SOURCE_NAME=user/password@//myhost:1521/service
 /path/to/binary/oracledb_exporter --log.level error --web.listen-address 0.0.0.0:9161
 ```
 
+# Integration with System D
+
+Create file **/etc/systemd/system/oracledb_exporter.service** with the following content:
+
+    [Unit]
+    Description=Service for oracle telemetry client
+    After=network.target
+    [Service]
+    Type=oneshot
+    #User=oracledb_exporter
+    ExecStart=/path/of/the/oracledb_exporter --log.level error --web.listen-address 0.0.0.0:9161
+    [Install]
+    WantedBy=multi-user.target
+
+Then tell System D to read files:
+
+    systemctl daemon-reload
+
+Start this new service:
+
+    systemctl start oracledb_exporter
+
+Check service status:
+
+    systemctl status oracledb_exporter
+
 ## Usage
 
 ```bash
