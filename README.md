@@ -232,6 +232,37 @@ COPY custom-metrics.toml /
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
 
+# TLS connection to database
+
+First, set the following variables:
+
+    export WALLET_PATH=/wallet/path/to/use
+    export TNS_ENTRY=tns_entry
+    export DB_USERNAME=db_username
+    export TNS_ADMIN=/tns/admin/path/to/use
+
+Create the wallet and set the credential:
+
+    mkstore -wrl $WALLET_PATH -create
+    mkstore -wrl $WALLET_PATH -createCredential $TNS_ENTRY $DB_USERNAME
+
+Then, update sqlnet.ora:
+
+    echo "
+    WALLET_LOCATION = (SOURCE = (METHOD = FILE) (METHOD_DATA = (DIRECTORY = $WALLET_PATH )))
+    SQLNET.WALLET_OVERRIDE = TRUE
+    SSL_CLIENT_AUTHENTICATION = FALSE
+    " >> $TNS_ADMIN/sqlnet.ora
+
+To use the wallet, use the wallet_location parameter. You may need to disable ssl verification with the
+ssl_server_dn_match parameter.
+
+Here a complete example of string connection:
+
+    DATA_SOURCE_NAME=username/password@tcps://dbhost:port/service?ssl_server_dn_match=false&wallet_location=wallet_path
+
+For more details, have a look at the following location: https://github.com/iamseth/oracledb_exporter/issues/84
+
 # Integration with Grafana
 
 An example Grafana dashboard is available [here](https://grafana.com/dashboards/3333).
