@@ -65,6 +65,10 @@ sgerrand.rsa.pub:
 glibc-2.29-r0.apk:
 	wget -q -O glibc-2.29-r0.apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.29-r0/glibc-2.29-r0.apk
 
+oraclelinux-image: $(ORA_RPM)
+	docker build -f oraclelinux/Dockerfile $(BUILD_ARGS) -t "iamseth/oracledb_exporter:$(VERSION)-oraclelinux" .
+	docker tag "iamseth/oracledb_exporter:$(VERSION)-oraclelinux" "iamseth/oracledb_exporter:oraclelinux"
+
 ubuntu-image: $(ORA_RPM)
 	docker build $(BUILD_ARGS)  -t "iamseth/oracledb_exporter:$(VERSION)" .
 	docker tag "iamseth/oracledb_exporter:$(VERSION)" "iamseth/oracledb_exporter:latest"
