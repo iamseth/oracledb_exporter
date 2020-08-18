@@ -57,7 +57,7 @@ test:
 clean:
 	rm -rf ./dist sgerrand.rsa.pub glibc-2.29-r0.apk oci8.pc
 
-docker: ubuntu-image alpine-image
+docker: ubuntu-image alpine-image oraclelinux-image
 
 sgerrand.rsa.pub:
 	wget -q -O sgerrand.rsa.pub  https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub
