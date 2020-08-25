@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -211,35 +212,44 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		log.Debugln("Successfully pinged Oracle database: ")
 		e.up.Set(1)
 	}
+	
+	wg := sync.WaitGroup{}
 
 	for _, metric := range metricsToScrap.Metric {
-		log.Debugln("About to scrape metric: ")
-		log.Debugln("- Metric MetricsDesc: ", metric.MetricsDesc)
-		log.Debugln("- Metric Context: ", metric.Context)
-		log.Debugln("- Metric MetricsType: ", metric.MetricsType)
-		log.Debugln("- Metric Labels: ", metric.Labels)
-		log.Debugln("- Metric FieldToAppend: ", metric.FieldToAppend)
-		log.Debugln("- Metric IgnoreZeroResult: ", metric.IgnoreZeroResult)
-		log.Debugln("- Metric Request: ", metric.Request)
+		wg.Add(1)
+		metric := metric  //https://golang.org/doc/faq#closures_and_goroutines
+		
+		go func() {
+			defer wg.Done()
+			
+			log.Debugln("About to scrape metric: ")
+			log.Debugln("- Metric MetricsDesc: ", metric.MetricsDesc)
+			log.Debugln("- Metric Context: ", metric.Context)
+			log.Debugln("- Metric MetricsType: ", metric.MetricsType)
+			log.Debugln("- Metric Labels: ", metric.Labels)
+			log.Debugln("- Metric FieldToAppend: ", metric.FieldToAppend)
+			log.Debugln("- Metric IgnoreZeroResult: ", metric.IgnoreZeroResult)
+			log.Debugln("- Metric Request: ", metric.Request)
 
-		if len(metric.Request) == 0 {
-			log.Errorln("Error scraping for ", metric.MetricsDesc, ". Did you forget to define request in your toml file?")
-			continue
-		}
+			if len(metric.Request) == 0 {
+				log.Errorln("Error scraping for ", metric.MetricsDesc, ". Did you forget to define request in your toml file?")
+				continue
+			}
 
-		if len(metric.MetricsDesc) == 0 {
-			log.Errorln("Error scraping for query", metric.Request, ". Did you forget to define metricsdesc  in your toml file?")
-			continue
-		}
+			if len(metric.MetricsDesc) == 0 {
+				log.Errorln("Error scraping for query", metric.Request, ". Did you forget to define metricsdesc  in your toml file?")
+				continue
+			}
 
-		if err = ScrapeMetric(e.db, ch, metric); err != nil {
-			log.Errorln("Error scraping for", metric.Context, "_", metric.MetricsDesc, ":", err)
-			e.scrapeErrors.WithLabelValues(metric.Context).Inc()
-		} else {
-			log.Debugln("Successfully scrapped metric: ", metric.Context)
-		}
+			if err = ScrapeMetric(e.db, ch, metric); err != nil {
+				log.Errorln("Error scraping for", metric.Context, "_", metric.MetricsDesc, ":", err)
+				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
+			} else {
+				log.Debugln("Successfully scrapped metric: ", metric.Context)
+			}
+		}()
 	}
-
+	wg.Wait()
 }
 
 func GetMetricType(metricType string, metricsType map[string]string) prometheus.ValueType {
