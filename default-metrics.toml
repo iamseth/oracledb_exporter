@@ -50,9 +50,9 @@ request = '''
 SELECT
   df.tablespace_name       as tablespace,
   df.type                  as type,
-  sum(df.bytes)            as bytes,
-  sum(df.max_bytes)        as max_bytes,
-  sum(f.free)              as free
+  nvl(sum(df.bytes),0)     as bytes,
+  nvl(sum(df.max_bytes),0) as max_bytes,
+  nvl(sum(f.free),0)       as free
 FROM
   (
     SELECT
