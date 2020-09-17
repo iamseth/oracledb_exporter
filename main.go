@@ -212,16 +212,16 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		log.Debugln("Successfully pinged Oracle database: ")
 		e.up.Set(1)
 	}
-	
+
 	wg := sync.WaitGroup{}
 
 	for _, metric := range metricsToScrap.Metric {
 		wg.Add(1)
-		metric := metric  //https://golang.org/doc/faq#closures_and_goroutines
-		
+		metric := metric //https://golang.org/doc/faq#closures_and_goroutines
+
 		go func() {
 			defer wg.Done()
-			
+
 			log.Debugln("About to scrape metric: ")
 			log.Debugln("- Metric MetricsDesc: ", metric.MetricsDesc)
 			log.Debugln("- Metric Context: ", metric.Context)
@@ -233,12 +233,12 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 			if len(metric.Request) == 0 {
 				log.Errorln("Error scraping for ", metric.MetricsDesc, ". Did you forget to define request in your toml file?")
-				continue
+				return
 			}
 
 			if len(metric.MetricsDesc) == 0 {
 				log.Errorln("Error scraping for query", metric.Request, ". Did you forget to define metricsdesc  in your toml file?")
-				continue
+				return
 			}
 
 			if err = ScrapeMetric(e.db, ch, metric); err != nil {
