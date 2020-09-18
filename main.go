@@ -427,7 +427,14 @@ func main() {
 	}
 	exporter := NewExporter(dsn)
 	prometheus.MustRegister(exporter)
-	http.Handle(*metricPath, promhttp.Handler())
+	
+	//See more info on https://github.com/prometheus/client_golang/blob/master/prometheus/promhttp/http.go#L269
+	opts := promhttp.HandlerOpts {
+        	ErrorLog: log.NewErrorLogger(),
+		//ErrorHandling: promhttp.ContinueOnError,
+	}
+	http.Handle(*metricPath, promhttp.HandlerFor(prometheus.DefaultGatherer, opts))
+	
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>"))
 	})
