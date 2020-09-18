@@ -220,6 +220,8 @@ oracledb_test_value_1 1
 oracledb_test_value_2 2
 ```
 
+You can find [here](./custom-metrics-example/custom-metrics.toml) a working example of custom metrics for slow queries, big queries and top 100 tables.
+
 # Customize metrics in a docker image
 
 If you run the exporter as a docker image and want to customize the metrics, you can use the following example:
