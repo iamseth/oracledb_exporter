@@ -428,7 +428,7 @@ func main() {
 	exporter := NewExporter(dsn)
 	prometheus.MustRegister(exporter)
 
-	//http.Handle(*metricPath, promhttp.Handler())
+	// See more info on https://github.com/prometheus/client_golang/blob/master/prometheus/promhttp/http.go#L269
 	opts := promhttp.HandlerOpts{
 		ErrorLog: log.NewErrorLogger(),
 		//ErrorHandling: promhttp.ContinueOnError,
