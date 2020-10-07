@@ -501,7 +501,7 @@ func checkIfMetricsChanged() bool {
 
 func reloadMetrics() {
 	// Truncate metricsToScrap
-	metricsToScrap := Metrics{}
+	metricsToScrap.Metric = []Metric{}
 
 	// Load default metrics
 	if _, err := toml.DecodeFile(*defaultFileMetrics, &metricsToScrap); err != nil {
