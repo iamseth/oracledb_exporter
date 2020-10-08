@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
+	"hash"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -64,6 +68,7 @@ type Metrics struct {
 var (
 	metricsToScrap    Metrics
 	additionalMetrics Metrics
+	hashMap           map[int][]byte
 )
 
 // Exporter collects Oracle DB metrics. It implements prometheus.Collector.
@@ -213,6 +218,10 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		e.up.Set(1)
 	}
 
+	if checkIfMetricsChanged() {
+		reloadMetrics()
+	}
+
 	wg := sync.WaitGroup{}
 
 	for _, metric := range metricsToScrap.Metric {
@@ -245,18 +254,19 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 			for column, metricType := range metric.MetricsType {
 				if metricType == "histogram" {
 					_, ok := metric.MetricsBuckets[column]
-					if ! ok {
+					if !ok {
 						log.Errorln("Unable to find MetricsBuckets configuration key for metric. (metric=" + column + ")")
 						return
 					}
 				}
 			}
 
+			scrapeStart := time.Now()
 			if err = ScrapeMetric(e.db, ch, metric); err != nil {
 				log.Errorln("Error scraping for", metric.Context, "_", metric.MetricsDesc, ":", err)
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
-				log.Debugln("Successfully scrapped metric: ", metric.Context)
+				log.Debugln("Successfully scrapped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
 			}
 		}()
 	}
@@ -265,8 +275,8 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 func GetMetricType(metricType string, metricsType map[string]string) prometheus.ValueType {
 	var strToPromType = map[string]prometheus.ValueType{
-		"gauge":   prometheus.GaugeValue,
-		"counter": prometheus.CounterValue,
+		"gauge":     prometheus.GaugeValue,
+		"counter":   prometheus.CounterValue,
 		"histogram": prometheus.UntypedValue,
 	}
 
@@ -334,8 +344,8 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 						}
 						counter, err := strconv.ParseUint(strings.TrimSpace(row[field]), 10, 64)
 						if err != nil {
-							log.Errorln("Unable to convert ", field, " value to int (metric=" + metric +
-								",metricHelp=" + metricHelp + ",value=<" + row[field] + ">)")
+							log.Errorln("Unable to convert ", field, " value to int (metric="+metric+
+								",metricHelp="+metricHelp+",value=<"+row[field]+">)")
 							continue
 						}
 						buckets[lelimit] = counter
@@ -368,8 +378,8 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 						}
 						counter, err := strconv.ParseUint(strings.TrimSpace(row[field]), 10, 64)
 						if err != nil {
-							log.Errorln("Unable to convert ", field, " value to int (metric=" + metric +
-								",metricHelp=" + metricHelp + ",value=<" + row[field] + ">)")
+							log.Errorln("Unable to convert ", field, " value to int (metric="+metric+
+								",metricHelp="+metricHelp+",value=<"+row[field]+">)")
 							continue
 						}
 						buckets[lelimit] = counter
@@ -460,14 +470,39 @@ func cleanName(s string) string {
 	return s
 }
 
-func main() {
-	log.AddFlags(kingpin.CommandLine)
-	kingpin.Version("oracledb_exporter " + Version)
-	kingpin.HelpFlag.Short('h')
-	kingpin.Parse()
+func hashFile(h hash.Hash, fn string) error {
+	f, err := os.Open(fn)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := io.Copy(h, f); err != nil {
+		return err
+	}
+	return nil
+}
 
-	log.Infoln("Starting oracledb_exporter " + Version)
-	dsn := os.Getenv("DATA_SOURCE_NAME")
+func checkIfMetricsChanged() bool {
+	for i, _customMetrics := range strings.Split(*customMetrics, ",") {
+		h := sha256.New()
+		if err := hashFile(h, _customMetrics); err != nil {
+			log.Errorln("Unable to get file hash", err)
+			return false
+		}
+		// If any of files has been changed reload metrics
+		if !bytes.Equal(hashMap[i], h.Sum(nil)) {
+			log.Infoln(_customMetrics, "has been changed. Reloading metrics...")
+			hashMap[i] = h.Sum(nil)
+			return true
+		}
+	}
+	return false
+}
+
+func reloadMetrics() {
+	// Truncate metricsToScrap
+	metricsToScrap.Metric = []Metric{}
+
 	// Load default metrics
 	if _, err := toml.DecodeFile(*defaultFileMetrics, &metricsToScrap); err != nil {
 		log.Errorln(err)
@@ -490,13 +525,28 @@ func main() {
 	} else {
 		log.Infoln("No custom metrics defined.")
 	}
+}
+
+func main() {
+	log.AddFlags(kingpin.CommandLine)
+	kingpin.Version("oracledb_exporter " + Version)
+	kingpin.HelpFlag.Short('h')
+	kingpin.Parse()
+
+	log.Infoln("Starting oracledb_exporter " + Version)
+	dsn := os.Getenv("DATA_SOURCE_NAME")
+
+	// Load default and custom metrics
+	hashMap = make(map[int][]byte)
+	reloadMetrics()
+
 	exporter := NewExporter(dsn)
 	prometheus.MustRegister(exporter)
 
 	// See more info on https://github.com/prometheus/client_golang/blob/master/prometheus/promhttp/http.go#L269
 	opts := promhttp.HandlerOpts{
 		ErrorLog: log.NewErrorLogger(),
-		//ErrorHandling: promhttp.ContinueOnError,
+		ErrorHandling: promhttp.ContinueOnError,
 	}
 	http.Handle(*metricPath, promhttp.HandlerFor(prometheus.DefaultGatherer, opts))
 
