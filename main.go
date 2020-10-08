@@ -266,7 +266,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 				log.Errorln("Error scraping for", metric.Context, "_", metric.MetricsDesc, ":", err)
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
-				log.Debugln("Successfully scrapped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
+				log.Debugln("Successfully scraped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
 			}
 		}()
 	}
