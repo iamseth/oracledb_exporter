@@ -484,6 +484,10 @@ func hashFile(h hash.Hash, fn string) error {
 
 func checkIfMetricsChanged() bool {
 	for i, _customMetrics := range strings.Split(*customMetrics, ",") {
+		if len(_customMetrics) == 0 {
+			continue
+		}
+		log.Debug("Checking modifications in following metrics definition file:", _customMetrics)
 		h := sha256.New()
 		if err := hashFile(h, _customMetrics); err != nil {
 			log.Errorln("Unable to get file hash", err)
