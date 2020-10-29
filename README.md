@@ -136,6 +136,8 @@ provide a different one using ``default.metrics`` option.
 
 # Custom metrics
 
+> NOTE: Do not put a `;` at the end of your SQL queries as this will **NOT** work.
+
 This exporter does not have the metrics you want? You can provide new one using TOML file. To specify this file to the
 exporter, you can:
 - Use ``--custom.metrics`` flag followed by the TOML file
@@ -233,6 +235,43 @@ COPY custom-metrics.toml /
 
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
+
+# Using a multiple host data source name
+
+> NOTE: This has been tested with v0.2.6a and will most probably work on versions above.
+
+> NOTE: While `user/password@//database1.example.com:1521,database3.example.com:1521/DBPRIM` works with SQLPlus, it doesn't seem to work with oracledb-exporter v0.2.6a.
+
+In some cases, one might want to scrape metrics from the currently available database when having a active-passive replication setup.
+
+This will try to connect to any available database to scrape for the metrics. With some replication options, the secondary database is not available when replicating. This allows the scraper to automatically fall back in case of the primary one failing.
+
+This example allows to achieve this:
+
+### Files & Folder:
+
+* tns_admin folder: `/path/to/tns_admin`
+* tnsnames.ora file: `/path/to/tns_admin/tnsnames.ora`
+
+Example of a tnsnames.ora file:
+```
+database =
+(DESCRIPTION =
+  (ADDRESS_LIST =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = database1.example.com)(PORT = 1521))
+    (ADDRESS = (PROTOCOL = TCP)(HOST = database2.example.com)(PORT = 1521))
+  )
+  (CONNECT_DATA =
+    (SERVICE_NAME = DBPRIM)
+  )
+)
+```
+
+### Environment Variables
+
+* `TNS_ENTRY`: Name of the entry to use (`database` in the example file above)
+* `TNS_ADMIN`: Path you choose for the tns admin folder (`/path/to/tns_admin` in the example file above)
+* `DATA_SOURCE_NAME`: Datasource pointing to the `TNS_ENTRY` (`user/password@database` in the example file above)
 
 # TLS connection to database
 
