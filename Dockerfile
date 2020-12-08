@@ -40,8 +40,10 @@ ENV ORACLE_VERSION=${ORACLE_VERSION}
 ENV LD_LIBRARY_PATH "/usr/lib/oracle/${ORACLE_VERSION}/client64/lib"
 RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
 
+ARG LEGACY_TABLESPACE
+ENV LEGACY_TABLESPACE=${LEGACY_TABLESPACE}
 COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
-ADD ./default-metrics.toml /default-metrics.toml
+ADD ./default-metrics${LEGACY_TABLESPACE}.toml /default-metrics.toml
 
 ENV DATA_SOURCE_NAME system/oracle@oracle/xe
 
