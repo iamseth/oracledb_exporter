@@ -61,6 +61,24 @@ Since 0.2.1, the exporter image exist with Alpine flavor. Watch out for their us
 docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@oracle/xe iamseth/oracledb_exporter:alpine
 ```
 
+### Different Docker Images
+
+Different Linux Distros:
+
+* `x.y.z` - Ubuntu Linux image
+* `x.y.z-oraclelinux` - Oracle Enterprise Linux image
+* `x.y.z-Alpine` - Alpine Linux image
+
+Forked Version:
+All the above docker images have a duplicate image tag ending in
+`_legacy-tablespace`. These versions use the older/deprecated tablespace
+utilization calculation based on the aggregate sum of file sizes in a given
+tablespace. The newer mechanism takes into account block sizes, extents, and
+fragmentation aligning with the same metrics reported from the Oracle Enterprise
+Manager. See https://github.com/iamseth/oracledb_exporter/issues/153 for
+details. The versions above should have a more useful tablespace utilization
+calculation going forward.
+
 ## Binary Release
 
 Pre-compiled versions for Linux 64 bit and Mac OSX 64 bit can be found under [releases](https://github.com/iamseth/oracledb_exporter/releases).
