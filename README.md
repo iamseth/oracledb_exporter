@@ -127,6 +127,12 @@ Usage of oracledb_exporter:
         Number of maximum idle connections in the connection pool. (default "0")
   --database.maxOpenConns string
         Number of maximum open connections in the connection pool. (default "10")
+  --web.secured-metrics  boolean
+        Expose metrics using https server. (default "false")
+  --web.ssl-server-cert string
+        Path to the PEM encoded certificate file.
+  --web.ssl-server-key string
+        Path to the PEM encoded key file.
 ```
 
 # Default metrics
