@@ -443,3 +443,21 @@ export DATA_SOURCE_NAME=system/oracle@myhost
 ```
 
 If using Docker, set the same variable using the -e flag.
+
+## An Oracle instance generates a lot of trace files being monitored by exporter
+
+As being said, Oracle instance may (and probably does) generate a lot of trace files alongside its alert log file, one trace file per scraping event. The trace file contains the following lines
+
+```
+...
+*** MODULE NAME:(prometheus_oracle_exporter-amd64@hostname)
+...
+kgxgncin: clsssinit: CLSS init failed with status 3
+kgxgncin: clsssinit: return status 3 (0 SKGXN not av) from CLSS
+```
+
+The root cause is Oracle's reaction of quering ASM-related views without ASM used. The current workaround proposed is to setup a regular task to cleanup these trace files from the filesystem, as example
+
+```
+$ find $ORACLE_BASE/diag/rdbms -name '*.tr[cm]' -mtime +14 -delete
+```
