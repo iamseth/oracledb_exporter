@@ -31,9 +31,11 @@ ENV VERSION ${VERSION:-0.1.0}
 
 RUN apk add libaio
 
+ARG LEGACY_TABLESPACE
+ENV LEGACY_TABLESPACE=${LEGACY_TABLESPACE}
 COPY --from=build /usr/lib/oracle /usr/lib/oracle
 COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
-ADD ./default-metrics.toml /default-metrics.toml
+ADD ./default-metrics${LEGACY_TABLESPACE}.toml /default-metrics.toml
 
 ARG ORACLE_VERSION
 ENV ORACLE_VERSION=${ORACLE_VERSION}

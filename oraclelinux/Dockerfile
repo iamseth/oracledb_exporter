@@ -35,8 +35,10 @@ RUN yum -y install oracle-release-el7 && \
     yum clean all
 
 
+ARG LEGACY_TABLESPACE
+ENV LEGACY_TABLESPACE=${LEGACY_TABLESPACE}
 COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
-ADD ./default-metrics.toml /default-metrics.toml
+ADD ./default-metrics${LEGACY_TABLESPACE}.toml /default-metrics.toml
 
 RUN chmod 755 /oracledb_exporter && \
     chmod 644 /default-metrics.toml && \

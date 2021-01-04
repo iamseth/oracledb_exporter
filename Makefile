@@ -8,6 +8,7 @@ RPM_VERSION    ?= $(ORACLE_VERSION).0.0.0-3
 ORA_RPM         = oracle-instantclient$(ORACLE_VERSION)-devel-$(RPM_VERSION).$(ARCH).rpm oracle-instantclient$(ORACLE_VERSION)-basic-$(RPM_VERSION).$(ARCH).rpm
 LD_LIBRARY_PATH = /usr/lib/oracle/$(ORACLE_VERSION)/client64/lib
 BUILD_ARGS      = --build-arg VERSION=$(VERSION) --build-arg ORACLE_VERSION=$(ORACLE_VERSION)
+LEGACY_TABLESPACE = --build-arg LEGACY_TABLESPACE=.legacy-tablespace
 DIST_DIR        = oracledb_exporter.$(VERSION)-ora$(ORACLE_VERSION).linux-${GOARCH}
 ARCHIVE         = oracledb_exporter.$(VERSION)-ora$(ORACLE_VERSION).linux-${GOARCH}.tar.gz
 
@@ -67,14 +68,17 @@ glibc-2.29-r0.apk:
 
 oraclelinux-image: $(ORA_RPM)
 	docker build -f oraclelinux/Dockerfile $(BUILD_ARGS) -t "iamseth/oracledb_exporter:$(VERSION)-oraclelinux" .
+	docker build -f oraclelinux/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "iamseth/oracledb_exporter:$(VERSION)-oraclelinux_legacy-tablespace" .
 	docker tag "iamseth/oracledb_exporter:$(VERSION)-oraclelinux" "iamseth/oracledb_exporter:oraclelinux"
 
 ubuntu-image: $(ORA_RPM)
-	docker build $(BUILD_ARGS)  -t "iamseth/oracledb_exporter:$(VERSION)" .
+	docker build $(BUILD_ARGS) -t "iamseth/oracledb_exporter:$(VERSION)" .
+	docker build $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "iamseth/oracledb_exporter:$(VERSION)_legacy-tablespace" .
 	docker tag "iamseth/oracledb_exporter:$(VERSION)" "iamseth/oracledb_exporter:latest"
 
 alpine-image: $(ORA_RPM) sgerrand.rsa.pub glibc-2.29-r0.apk
 	docker build -f alpine/Dockerfile $(BUILD_ARGS) -t "iamseth/oracledb_exporter:$(VERSION)-alpine" .
+	docker build -f alpine/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "iamseth/oracledb_exporter:$(VERSION)-alpine_legacy-tablespace" .
 	docker tag "iamseth/oracledb_exporter:$(VERSION)-alpine" "iamseth/oracledb_exporter:alpine"
 
 travis: oci.pc prereq deps test linux docker
