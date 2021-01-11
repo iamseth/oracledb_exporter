@@ -88,30 +88,58 @@ for your operating system. Only the basic version is required for execution.
 
 # Running
 
-Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting. For Example:
+Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting.
+DATA_SOURCE_NAME should be in Oracle EZCONNECT format:
+ https://docs.oracle.com/en/database/oracle/oracle-database/19/netag/configuring-naming-methods.html#GUID-B0437826-43C1-49EC-A94D-B650B6A4A6EE
+19c Oracle Client supports enhanced EZCONNECT, you are able to failover to standby DB or gather some heavy metrics from active standby DB and specify some additional parameters. Within 19c client you are able to connect 12c primary/standby DB too :)
+
+For Example:
 
 ```bash
 # export Oracle location:
 export DATA_SOURCE_NAME=system/password@oracle-sid
 # or using a complete url:
 export DATA_SOURCE_NAME=user/password@//myhost:1521/service
+# 19c client for primary/standby configuration
+export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/service
+# 19c client for primary/standby configuration with options
+export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/service?connect_timeout=5&transport_connect_timeout=3&retry_count=3
 # Then run the exporter
 /path/to/binary/oracledb_exporter --log.level error --web.listen-address 0.0.0.0:9161
 ```
 
 # Integration with System D
 
+Create **oracledb_exporter** user with disabled login and **oracledb_exporter** group
+mkdir /etc/etc/oracledb_exporter
+chown root:oracledb_exporter /etc/etc/oracledb_exporter
+chmod 775 /etc/etc/oracledb_exporter
+Put config files to **/etc/etc/oracledb_exporter**
+Put binary to **/usr/local/bin**
+
 Create file **/etc/systemd/system/oracledb_exporter.service** with the following content:
 
-    [Unit]
-    Description=Service for oracle telemetry client
-    After=network.target
-    [Service]
-    Type=oneshot
-    #User=oracledb_exporter
-    ExecStart=/path/of/the/oracledb_exporter --log.level error --web.listen-address 0.0.0.0:9161
-    [Install]
-    WantedBy=multi-user.target
+```bash
+[Unit]
+Description=Service for oracle telemetry client
+After=network.target
+[Service]
+Type=oneshot
+#!!! Set your values and uncomment
+#User=oracledb_exporter
+#Group=oracledb_exporter
+#Environment="DATA_SOURCE_NAME=dbsnmp/Bercut01@//primaryhost:1521,standbyhost:1521/myservice?transport_connect_timeout=5&retry_count=3"
+#Environment="LD_LIBRARY_PATH=/u01/app/oracle/product/19.0.0/dbhome_1/lib"
+#Environment="ORACLE_HOME=/u01/app/oracle/product/19.0.0/dbhome_1"
+#Environment="CUSTOM_METRICS=/etc/oracledb_exporter/custom-metrics.toml"
+ExecStart=/usr/local/bin/oracledb_exporter \
+  --default.metrics "/etc/oracledb_exporter/default-metrics.toml"
+  --log.level error --web.listen-address 0.0.0.0:9161
+[Install]
+WantedBy=multi-user.target
+```
+
+
 
 Then tell System D to read files:
 
