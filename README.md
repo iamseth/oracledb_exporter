@@ -110,12 +110,12 @@ export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/servic
 
 # Integration with System D
 
-Create **oracledb_exporter** user with disabled login and **oracledb_exporter** group  
-mkdir /etc/etc/oracledb_exporter  
-chown root:oracledb_exporter /etc/etc/oracledb_exporter  
-chmod 775 /etc/etc/oracledb_exporter  
-Put config files to **/etc/etc/oracledb_exporter**  
-Put binary to **/usr/local/bin**  
+Create **oracledb_exporter** user with disabled login and **oracledb_exporter** group\
+mkdir /etc/etc/oracledb_exporter\
+chown root:oracledb_exporter /etc/etc/oracledb_exporter\
+chmod 775 /etc/etc/oracledb_exporter\
+Put config files to **/etc/etc/oracledb_exporter**\
+Put binary to **/usr/local/bin**\
 
 Create file **/etc/systemd/system/oracledb_exporter.service** with the following content:
 
