@@ -132,8 +132,8 @@ Type=oneshot
 #Environment="LD_LIBRARY_PATH=/u01/app/oracle/product/19.0.0/dbhome_1/lib"
 #Environment="ORACLE_HOME=/u01/app/oracle/product/19.0.0/dbhome_1"
 #Environment="CUSTOM_METRICS=/etc/oracledb_exporter/custom-metrics.toml"
-ExecStart=/usr/local/bin/oracledb_exporter \
-  --default.metrics "/etc/oracledb_exporter/default-metrics.toml" \
+ExecStart=/usr/local/bin/oracledb_exporter  \
+  --default.metrics "/etc/oracledb_exporter/default-metrics.toml"  \
   --log.level error --web.listen-address 0.0.0.0:9161
 [Install]
 WantedBy=multi-user.target
