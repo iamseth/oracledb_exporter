@@ -90,6 +90,7 @@ for your operating system. Only the basic version is required for execution.
 
 Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting.
 DATA_SOURCE_NAME should be in Oracle EZCONNECT format:
+
  https://docs.oracle.com/en/database/oracle/oracle-database/19/netag/configuring-naming-methods.html#GUID-B0437826-43C1-49EC-A94D-B650B6A4A6EE
 19c Oracle Client supports enhanced EZCONNECT, you are able to failover to standby DB or gather some heavy metrics from active standby DB and specify some additional parameters. Within 19c client you are able to connect 12c primary/standby DB too :)
 
