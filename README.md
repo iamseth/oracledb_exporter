@@ -39,7 +39,7 @@ The following metrics are exposed currently.
 - oracledb_wait_time_user_io
 - oracledb_tablespace_bytes
 - oracledb_tablespace_max_bytes
-- oracledb_tablespace_bytes_free
+- oracledb_tablespace_free
 - oracledb_process_count
 - oracledb_resource_current_utilization
 - oracledb_resource_limit_value
@@ -130,7 +130,7 @@ Type=oneshot
 #!!! Set your values and uncomment
 #User=oracledb_exporter
 #Group=oracledb_exporter
-#Environment="DATA_SOURCE_NAME=dbsnmp/password@//primaryhost:1521,standbyhost:1521/myservice?transport_connect_timeout=5&retry_count=3"
+#Environment="DATA_SOURCE_NAME=dbsnmp/Bercut01@//primaryhost:1521,standbyhost:1521/myservice?transport_connect_timeout=5&retry_count=3"
 #Environment="LD_LIBRARY_PATH=/u01/app/oracle/product/19.0.0/dbhome_1/lib"
 #Environment="ORACLE_HOME=/u01/app/oracle/product/19.0.0/dbhome_1"
 #Environment="CUSTOM_METRICS=/etc/oracledb_exporter/custom-metrics.toml"
