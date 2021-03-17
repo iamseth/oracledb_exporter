@@ -1,0 +1,30 @@
+#
+# Ansible managed
+#
+
+[Unit]
+Description=Service for oracle telemetry client
+After=network-online.target
+
+[Service]
+Type=simple
+Environment="DATA_SOURCE_NAME=dbsnmp/password@//host:1521/service?transport_connect_timeout=5&retry_count=3"
+Environment="LD_LIBRARY_PATH=/u01/app/oracle/product/19.0.0/dbhome_1/lib"
+Environment="ORACLE_HOME=/u01/app/oracle/product/19.0.0/dbhome_1"
+#Environment="PATH=$PATH:/u01/app/oracle/product/19.0.0/dbhome_1/bin"
+#Environment="TNS_ADMIN=/u01/app/oracle/product/19.0.0/dbhome_1/network/admin"
+User=oracledb_exporter
+Group=oracledb_exporter
+ExecStart=/usr/local/bin/oracledb_exporter \
+  --default.metrics "/etc/oracledb_exporter/default-metrics.toml" \
+  --log.level "error" \
+  --web.listen-address 0.0.0.0:9161 \
+  --log.format "logger:syslog?appname=oracledb_exporter&local=7"
+
+KillMode=process
+RemainAfterExit=no
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
