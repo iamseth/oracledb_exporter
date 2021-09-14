@@ -23,17 +23,22 @@ ENV GOOS            linux
 
 RUN go build -v -ldflags "-X main.Version=${VERSION} -s -w"
 
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 LABEL authors="Seth Miller,Yannig Perré"
 LABEL maintainer="Yannig Perré <yannig.perre@gmail.com>"
 
 ENV VERSION ${VERSION:-0.1.0}
+ENV TZ=Europe/Amsterdam \
+    DEBIAN_FRONTEND=noninteractive
 
 COPY oracle-instantclient*${ORACLE_VERSION}*basic*.rpm /
 
 RUN apt-get -qq update && \
-    apt-get -qq install --no-install-recommends -qq libaio1 rpm -y && rpm -Uvh --nodeps /oracle*${ORACLE_VERSION}*rpm && \
+  apt-get -qq install --no-install-recommends tzdata libaio1 rpm -y && rpm -Uvh --nodeps /oracle*${ORACLE_VERSION}*rpm && \
     rm -f /oracle*rpm
+
+RUN adduser --system --uid 1000 --group appuser \
+  && usermod -a -G 0,appuser appuser
 
 ARG ORACLE_VERSION
 ENV ORACLE_VERSION=${ORACLE_VERSION}
@@ -42,13 +47,13 @@ RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
 
 ARG LEGACY_TABLESPACE
 ENV LEGACY_TABLESPACE=${LEGACY_TABLESPACE}
-COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
+COPY --chown=appuser:appuser --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
 ADD ./default-metrics${LEGACY_TABLESPACE}.toml /default-metrics.toml
 
 ENV DATA_SOURCE_NAME system/oracle@oracle/xe
 
-RUN chmod 755 /oracledb_exporter
-
 EXPOSE 9161
+
+USER appuser
 
 ENTRYPOINT ["/oracledb_exporter"]
