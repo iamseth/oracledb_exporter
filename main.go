@@ -101,8 +101,17 @@ func atoi(stringValue string) int {
 	return intValue
 }
 
+func maskDsn(dsn string) string {
+	parts := strings.Split(dsn, "@")
+	if len(parts) > 1 {
+		maskedUrl := "***@" + parts[1]
+		return maskedUrl
+	}
+	return dsn
+}
+
 func connect(dsn string) *sql.DB {
-	log.Debugln("Launching connection: ", dsn)
+	log.Debugln("Launching connection: ", maskDsn(dsn))
 	db, err := sql.Open("oci8", dsn)
 	if err != nil {
 		log.Errorln("Error while connecting to", dsn)
@@ -112,7 +121,7 @@ func connect(dsn string) *sql.DB {
 	db.SetMaxIdleConns(*maxIdleConns)
 	log.Debugln("set max open connections to ", *maxOpenConns)
 	db.SetMaxOpenConns(*maxOpenConns)
-	log.Debugln("Successfully connected to: ", dsn)
+	log.Debugln("Successfully connected to: ", maskDsn(dsn))
 	return db
 }
 
@@ -217,7 +226,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		e.up.Set(0)
 		return
 	} else {
-		log.Debugln("Successfully pinged Oracle database: ")
+		log.Debugln("Successfully pinged Oracle database: ", maskDsn(e.dsn))
 		e.up.Set(1)
 	}
 
@@ -266,7 +275,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 			scrapeStart := time.Now()
 			if err = ScrapeMetric(e.db, ch, metric); err != nil {
-				log.Errorln("Error scraping for", metric.Context, "_", metric.MetricsDesc, ":", err)
+				log.Errorln("Error scraping for", metric.Context, "_", metric.MetricsDesc, time.Since(scrapeStart), ":", err)
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
 				log.Debugln("Successfully scraped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
@@ -396,6 +405,7 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 		}
 		return nil
 	}
+	log.Debugln("Calling function GeneratePrometheusMetrics()")
 	err := GeneratePrometheusMetrics(db, genericParser, request)
 	log.Debugln("ScrapeGenericValues() - metricsCount: ", metricsCount)
 	if err != nil {

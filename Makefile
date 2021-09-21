@@ -1,10 +1,10 @@
-VERSION        ?= 0.3.0
-ORACLE_VERSION ?= 18.5
+VERSION        ?= 0.3.2
+ORACLE_VERSION ?= 19.10
 LDFLAGS        := -X main.Version=$(VERSION)
 GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
 ARCH           ?= $(shell uname -m)
 GOARCH         ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(ARCH)))
-RPM_VERSION    ?= $(ORACLE_VERSION).0.0.0-3
+RPM_VERSION    ?= $(ORACLE_VERSION).0.0.0-1
 ORA_RPM         = oracle-instantclient$(ORACLE_VERSION)-devel-$(RPM_VERSION).$(ARCH).rpm oracle-instantclient$(ORACLE_VERSION)-basic-$(RPM_VERSION).$(ARCH).rpm
 LD_LIBRARY_PATH = /usr/lib/oracle/$(ORACLE_VERSION)/client64/lib
 BUILD_ARGS      = --build-arg VERSION=$(VERSION) --build-arg ORACLE_VERSION=$(ORACLE_VERSION)
