@@ -28,8 +28,7 @@ LABEL authors="Seth Miller,Yannig Perré"
 LABEL maintainer="Yannig Perré <yannig.perre@gmail.com>"
 
 ENV VERSION ${VERSION:-0.1.0}
-ENV TZ=Europe/Amsterdam \
-    DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 COPY oracle-instantclient*${ORACLE_VERSION}*basic*.rpm /
 
