@@ -42,6 +42,7 @@ var (
 	securedMetrics     = kingpin.Flag("web.secured-metrics", "Expose metrics using https.").Default("false").Bool()
 	serverCert         = kingpin.Flag("web.ssl-server-cert", "Path to the PEM encoded certificate").ExistingFile()
 	serverKey          = kingpin.Flag("web.ssl-server-key", "Path to the PEM encoded key").ExistingFile()
+	scrapeInterval     = kingpin.Flag("scrape.interval", "Interval between each scrape. Default is to scrape on collect requests").Default("0s").Duration()
 )
 
 // Metric name parts.
@@ -80,6 +81,7 @@ type Exporter struct {
 	duration, error prometheus.Gauge
 	totalScrapes    prometheus.Counter
 	scrapeErrors    *prometheus.CounterVec
+	scrapeResults   []prometheus.Metric
 	up              prometheus.Gauge
 	db              *sql.DB
 }
@@ -194,12 +196,45 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implements prometheus.Collector.
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
-	e.scrape(ch)
+	if *scrapeInterval == 0 { // if we are to scrape when the request is made
+		e.scrape(ch)
+	} else {
+		scrapeResults := e.scrapeResults // There is a risk that e.scrapeResults will be replaced while we traverse this look. This should mitigate that risk
+		for idx := range scrapeResults {
+			ch <- scrapeResults[idx]
+		}
+	}
 	ch <- e.duration
 	ch <- e.totalScrapes
 	ch <- e.error
 	e.scrapeErrors.Collect(ch)
 	ch <- e.up
+}
+
+func (e *Exporter) runScheduledScrapes() {
+	if *scrapeInterval == 0 {
+		return // Do nothing as scrapes will be done on Collect requests
+	}
+	ticker := time.NewTicker(*scrapeInterval)
+	defer ticker.Stop()
+	for {
+		metricCh := make(chan prometheus.Metric, 5)
+		go func() {
+			scrapeResults := []prometheus.Metric{}
+			for {
+				scrapeResult, more := <-metricCh
+				if more {
+					scrapeResults = append(scrapeResults, scrapeResult)
+				} else {
+					e.scrapeResults = scrapeResults
+					return
+				}
+			}
+		}()
+		e.scrape(metricCh)
+		close(metricCh)
+		<-ticker.C
+	}
 }
 
 func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
@@ -446,7 +481,7 @@ func GeneratePrometheusMetrics(db *sql.DB, parse func(row map[string]string) err
 		// and a second slice to contain pointers to each item in the columns slice.
 		columns := make([]interface{}, len(cols))
 		columnPointers := make([]interface{}, len(cols))
-		for i, _ := range columns {
+		for i := range columns {
 			columnPointers[i] = &columns[i]
 		}
 
@@ -559,10 +594,11 @@ func main() {
 
 	exporter := NewExporter(dsn)
 	prometheus.MustRegister(exporter)
+	go exporter.runScheduledScrapes()
 
 	// See more info on https://github.com/prometheus/client_golang/blob/master/prometheus/promhttp/http.go#L269
 	opts := promhttp.HandlerOpts{
-		ErrorLog: log.NewErrorLogger(),
+		ErrorLog:      log.NewErrorLogger(),
 		ErrorHandling: promhttp.ContinueOnError,
 	}
 	http.Handle(*metricPath, promhttp.HandlerFor(prometheus.DefaultGatherer, opts))
