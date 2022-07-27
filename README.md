@@ -176,12 +176,8 @@ Usage of oracledb_exporter:
         Number of maximum idle connections in the connection pool. (default "0")
   --database.maxOpenConns string
         Number of maximum open connections in the connection pool. (default "10")
-  --web.secured-metrics  boolean
-        Expose metrics using https server. (default "false")
-  --web.ssl-server-cert string
-        Path to the PEM encoded certificate file.
-  --web.ssl-server-key string
-        Path to the PEM encoded key file.
+  --web.config
+        Specify which web configuration file to load
 ```
 
 # Default metrics
@@ -510,3 +506,16 @@ The root cause is Oracle's reaction of quering ASM-related views without ASM use
 ```
 $ find $ORACLE_BASE/diag/rdbms -name '*.tr[cm]' -mtime +14 -delete
 ```
+
+
+## TLS and basic authentication
+
+Apache Exporter supports TLS and basic authentication. This enables better
+control of the various HTTP endpoints.
+
+To use TLS and/or basic authentication, you need to pass a configuration file
+using the `--web.config` parameter. The format of the file is described
+[in the exporter-toolkit repository](https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md).
+
+Note that the TLS and basic authentication settings affect all HTTP endpoints:
+/metrics for scraping, /probe for probing, and the web UI.
