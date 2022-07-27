@@ -24,9 +24,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/exporter-toolkit/web"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 	//Required for debugging
 	//_ "net/http/pprof"
