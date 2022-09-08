@@ -1,14 +1,19 @@
-FROM golang:1.14 AS build
+FROM golang:1.19 AS build
 
 ARG ORACLE_VERSION
 ENV ORACLE_VERSION=${ORACLE_VERSION}
-ENV LD_LIBRARY_PATH "/usr/lib/oracle/${ORACLE_VERSION}/client64/lib"
+ARG MAJOR_VERSION
+ENV MAJOR_VERSION=${MAJOR_VERSION}
+ENV LD_LIBRARY_PATH "/usr/lib/oracle/${MAJOR_VERSION}/client64/lib"
 
 RUN apt-get -qq update && apt-get install --no-install-recommends -qq libaio1 rpm
-COPY oci8.pc.template /usr/share/pkgconfig/oci8.pc
-RUN sed -i "s/@ORACLE_VERSION@/$ORACLE_VERSION/g" /usr/share/pkgconfig/oci8.pc
 COPY oracle*${ORACLE_VERSION}*.rpm /
 RUN rpm -Uh --nodeps /oracle-instantclient*.x86_64.rpm && rm /*.rpm
+
+COPY oci8.pc.template /usr/share/pkgconfig/oci8.pc
+RUN sed -i "s/@ORACLE_VERSION@/$ORACLE_VERSION/g" /usr/share/pkgconfig/oci8.pc && \
+    sed -i "s/@MAJOR_VERSION@/$MAJOR_VERSION/g" /usr/share/pkgconfig/oci8.pc && \
+    find /usr -name oci.pc
 RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
 
 WORKDIR /go/src/oracledb_exporter
@@ -23,7 +28,7 @@ ENV GOOS            linux
 
 RUN go build -v -ldflags "-X main.Version=${VERSION} -s -w"
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 LABEL authors="Seth Miller,Yannig Perré"
 LABEL maintainer="Yannig Perré <yannig.perre@gmail.com>"
 

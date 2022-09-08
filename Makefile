@@ -1,21 +1,27 @@
-VERSION        ?= 0.3.2
-ORACLE_VERSION ?= 19.10
-LDFLAGS        := -X main.Version=$(VERSION)
-GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
 ARCH           ?= $(shell uname -m)
 GOARCH         ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(ARCH)))
+VERSION        ?= 0.4.0
+MAJOR_VERSION  ?= 21
+MINOR_VERSION  ?= 7
+ORACLE_VERSION ?= $(MAJOR_VERSION).$(MINOR_VERSION)
+PKG_VERSION    ?= $(ORACLE_VERSION).0.0.0-1.el8.$(ARCH)
+LDFLAGS        := -X main.Version=$(VERSION)
+GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
 RPM_VERSION    ?= $(ORACLE_VERSION).0.0.0-1
-ORA_RPM         = oracle-instantclient$(ORACLE_VERSION)-devel-$(RPM_VERSION).$(ARCH).rpm oracle-instantclient$(ORACLE_VERSION)-basic-$(RPM_VERSION).$(ARCH).rpm
+ORA_RPM         = oracle-instantclient-basic-$(PKG_VERSION).rpm oracle-instantclient-devel-$(PKG_VERSION).rpm
 LD_LIBRARY_PATH = /usr/lib/oracle/$(ORACLE_VERSION)/client64/lib
-BUILD_ARGS      = --build-arg VERSION=$(VERSION) --build-arg ORACLE_VERSION=$(ORACLE_VERSION)
+BUILD_ARGS      = --build-arg VERSION=$(VERSION) --build-arg ORACLE_VERSION=$(ORACLE_VERSION) \
+                  --build-arg MAJOR_VERSION=$(MAJOR_VERSION)
 LEGACY_TABLESPACE = --build-arg LEGACY_TABLESPACE=.legacy-tablespace
 DIST_DIR        = oracledb_exporter.$(VERSION)-ora$(ORACLE_VERSION).linux-${GOARCH}
 ARCHIVE         = oracledb_exporter.$(VERSION)-ora$(ORACLE_VERSION).linux-${GOARCH}.tar.gz
 
+IMAGE_NAME     ?= iamseth/oracledb_exporter
+
 export LD_LIBRARY_PATH ORACLE_VERSION
 
 %.rpm:
-	wget -q http://yum.oracle.com/repo/OracleLinux/OL7/oracle/instantclient/$(ARCH)/getPackage/$@
+	wget -q https://download.oracle.com/otn_software/linux/instantclient/217000/$@
 
 download-rpms: $(ORA_RPM)
 
@@ -28,7 +34,8 @@ prereq: download-rpms
 	sudo ldconfig
 
 oci.pc:
-	sed "s/@ORACLE_VERSION@/$(ORACLE_VERSION)/g" oci8.pc.template > oci8.pc
+	sed "s/@ORACLE_VERSION@/$(ORACLE_VERSION)/g" oci8.pc.template | \
+		sed "s/@MAJOR_VERSION@/$(MAJOR_VERSION)/g" > oci8.pc
 
 linux: oci.pc
 	@echo build linux
@@ -66,20 +73,20 @@ sgerrand.rsa.pub:
 glibc-2.29-r0.apk:
 	wget -q -O glibc-2.29-r0.apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.29-r0/glibc-2.29-r0.apk
 
-oraclelinux-image: $(ORA_RPM)
-	docker build -f oraclelinux/Dockerfile $(BUILD_ARGS) -t "iamseth/oracledb_exporter:$(VERSION)-oraclelinux" .
-	docker build -f oraclelinux/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "iamseth/oracledb_exporter:$(VERSION)-oraclelinux_legacy-tablespace" .
-	docker tag "iamseth/oracledb_exporter:$(VERSION)-oraclelinux" "iamseth/oracledb_exporter:oraclelinux"
+oraclelinux-image:
+	docker build -f oraclelinux/Dockerfile $(BUILD_ARGS) -t "$(IMAGE_NAME):$(VERSION)-oraclelinux" .
+	docker build -f oraclelinux/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_NAME):$(VERSION)-oraclelinux_legacy-tablespace" .
+	docker tag "$(IMAGE_NAME):$(VERSION)-oraclelinux" "$(IMAGE_NAME):oraclelinux"
 
 ubuntu-image: $(ORA_RPM)
-	docker build $(BUILD_ARGS) -t "iamseth/oracledb_exporter:$(VERSION)" .
-	docker build $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "iamseth/oracledb_exporter:$(VERSION)_legacy-tablespace" .
-	docker tag "iamseth/oracledb_exporter:$(VERSION)" "iamseth/oracledb_exporter:latest"
+	docker build $(BUILD_ARGS) -t "$(IMAGE_NAME):$(VERSION)" .
+	docker build $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_NAME):$(VERSION)_legacy-tablespace" .
+	docker tag "$(IMAGE_NAME):$(VERSION)" "$(IMAGE_NAME):latest"
 
 alpine-image: $(ORA_RPM) sgerrand.rsa.pub glibc-2.29-r0.apk
-	docker build -f alpine/Dockerfile $(BUILD_ARGS) -t "iamseth/oracledb_exporter:$(VERSION)-alpine" .
-	docker build -f alpine/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "iamseth/oracledb_exporter:$(VERSION)-alpine_legacy-tablespace" .
-	docker tag "iamseth/oracledb_exporter:$(VERSION)-alpine" "iamseth/oracledb_exporter:alpine"
+	docker build -f alpine/Dockerfile $(BUILD_ARGS) -t "$(IMAGE_NAME):$(VERSION)-alpine" .
+	docker build -f alpine/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_NAME):$(VERSION)-alpine_legacy-tablespace" .
+	docker tag "$(IMAGE_NAME):$(VERSION)-alpine" "$(IMAGE_NAME):alpine"
 
 travis: oci.pc prereq deps test linux docker
 	@true
