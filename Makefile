@@ -67,6 +67,14 @@ clean:
 
 docker: ubuntu-image alpine-image oraclelinux-image
 
+push-images:
+	docker push $(IMAGE_NAME):$(VERSION)-oraclelinux
+	docker push $(IMAGE_NAME):oraclelinux
+	docker push $(IMAGE_NAME):$(VERSION)
+	docker push $(IMAGE_NAME):latest
+	docker push $(IMAGE_NAME):$(VERSION)-alpine
+	docker push $(IMAGE_NAME):alpine
+
 sgerrand.rsa.pub:
 	wget -q -O sgerrand.rsa.pub  https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub
 

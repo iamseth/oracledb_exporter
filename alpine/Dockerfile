@@ -28,7 +28,7 @@ ENV GOOS            linux
 
 RUN go build -v -ldflags "-X main.Version=${VERSION} -s -w"
 
-FROM frolvlad/alpine-glibc:glibc-2.29
+FROM frolvlad/alpine-glibc:glibc-2.35
 LABEL authors="Seth Miller,Yannig Perré"
 LABEL maintainer="Yannig Perré <yannig.perre@gmail.com>"
 
