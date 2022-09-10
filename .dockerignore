@@ -1,0 +1,8 @@
+oraclelinux
+alpline
+.*
+tests
+*-example.toml
+*.md
+*.pc
+dist

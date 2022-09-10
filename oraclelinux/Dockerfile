@@ -37,6 +37,7 @@ ENV MAJOR_VERSION=${MAJOR_VERSION}
 
 RUN microdnf -y install oracle-release-el8 && \
     microdnf -y install oracle-instantclient-release-el8 && \
+    microdnf -y install oracle-instantclient-basic && \
     microdnf clean all
 
 
@@ -50,7 +51,7 @@ RUN chmod 755 /oracledb_exporter && \
     groupadd www-data && useradd -g www-data www-data
 USER www-data
 ENV DATA_SOURCE_NAME system/oracle@oracle/xe
-ENV LD_LIBRARY_PATH "/usr/lib/oracle/${ORACLE_VERSION}/client64/lib"
+ENV LD_LIBRARY_PATH "/usr/lib/oracle/${MAJOR_VERSION}/client64/lib"
 
 EXPOSE 9161
 
