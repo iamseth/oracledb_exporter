@@ -1,0 +1,256 @@
+name: Pull request
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ${{ github.head_ref }}/${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runs-on: ubuntu-latest
+  env:
+    PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+    PULL_REQUEST_BRANCH: ${{ github.head_ref }}
+    BRANCH: ${{ github.event.pull_request.head.ref }}
+    REGISTRY: ghcr.io
+    IMAGE_NAME: ${{ github.repository }}
+
+  config:
+    if: github.triggering_actor != 'dependabot[bot]'
+    outputs:
+      go-version: ${{ fromJson(steps.config.outputs.config).go-version }}
+      branch: ${{ steps.branch.outputs.branch }}
+    steps:
+      - id: branch
+        run: |
+          BRANCH='${{ github.event.pull_request.head.ref }}'
+          echo "branch=${BRANCH##refs/heads/}" >> $GITHUB_OUTPUT
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ steps.branch.outputs.branch }}
+      - name: Read config
+        id: config
+        run: echo "config=$(jq -M -c '.' ./.github/workflow-config.json)" >> $GITHUB_OUTPUT
+
+  build:
+    needs:
+      - config
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.config.outputs.branch }}
+
+      - name: Setup Golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ needs.config.outputs.go-version }}
+
+      - name: Setup Golang cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build artifact
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o app
+
+      - name: Package artifact
+        run: |
+          files=("app" "resources")
+          for i in "${!files[@]}"
+          do
+              [ -e "${files[i]}" ] || unset 'files[$i]'
+          done
+          tar -czv -f application.tar.gz "${files[@]}"
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v3
+        with:
+          name: application
+          path: "./application.tar.gz"
+
+  test:
+    needs:
+      - config
+      - build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.config.outputs.branch }}
+
+      - name: Setup Golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ needs.config.outputs.go-version }}
+
+      - name: Setup Golang cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Go test
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go test -race ./... -coverprofile="test-coverage.out"
+
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-coverage
+          path: "./test-coverage.out"
+
+  lint:
+    needs:
+      - config
+      - build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.config.outputs.branch }}
+
+      - name: Setup Go lint cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            ~/.cache/golangci-lint
+          key: ${{ runner.os }}-go-lint-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-lint-
+            ${{ runner.os }}-go-
+
+      - name: Install linter
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ~/.bin v1.49.0
+
+      - name: Go GitHub Actions lint
+        continue-on-error: true
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 ~/.bin/golangci-lint --config ./.golangci.yml --out-format github-actions run
+
+      - name: Go lint
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 ~/.bin/golangci-lint --config ./.golangci.yml --out-format checkstyle run | tee lint-output.xml
+
+      - name: Upload lint result
+        uses: actions/upload-artifact@v2
+        with:
+          name: lint-output
+          path: "./lint-output.xml"
+
+  release:
+    needs:
+      - config
+      - build
+      - test
+    steps:
+      - name: Generate admin token
+        id: token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_KEY }}
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ steps.token.outputs.token }}
+          ref: ${{ steps.branch.outputs.branch }}
+
+      - name: Set alpha version
+        id: get-version
+        run: echo "version=rc-${{ env.PULL_REQUEST_NUMBER }}-${{ github.ref }}" >> $GITHUB_OUTPUT
+
+      - name: Download artifact
+        uses: "actions/download-artifact@v2"
+        with:
+          name: application
+          path: "."
+
+      - name: Unpack artifact
+        run: tar -xzvf application.tar.gz
+
+      - name: Create release
+        uses: actions/create-release@v1
+        id: create-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        with:
+          tag_name: ${{ env.VERSION }}
+          release_name: ${{ env.VERSION }}
+          draft: false
+          prerelease: true
+
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: ./application.tar.gz
+          asset_name: ${{ github.event.repository.name }}.tar.gz
+          asset_content_type: application/gzip
+
+  deploy:
+    if: ${{ !failure() && needs.release.result == 'success' }}
+    needs:
+      - config
+      - build
+      - test
+      - lint
+      - release
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build image
+        run: docker build . --file Dockerfile --tag $IMAGE_NAME
+
+      - name: Log in to registry
+        # This is where you will update the personal access token to GITHUB_TOKEN
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u $ --password-stdin
+
+      - name: Push image
+        id: docker-build
+        run: |
+          IMAGE_ID=${{ env.REGISTRY }}/${{ github.repository_owner }}/$IMAGE_NAME
+
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          echo "image-id=$IMAGE_ID" >> $GITHUB_OUTPUT
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "master" ] && VERSION=latest
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
+
+      - name: Container scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ steps.docker-build.outputs.image-id }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'

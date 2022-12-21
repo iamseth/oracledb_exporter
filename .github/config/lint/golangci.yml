@@ -1,0 +1,177 @@
+run:
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  deadline: 2m
+
+linters:
+  disable-all: true
+  enable:
+    # Default enabled
+    - deadcode
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+
+    # Ours
+    - gocritic
+    - gofumpt
+    - goimports
+    - lll
+    - misspell
+    - stylecheck
+    - unconvert
+    - unparam
+    - gocyclo
+    - gocognit
+    - dupl
+    - errorlint
+    - bodyclose
+    - exhaustive
+    - exhaustivestruct
+    - gochecknoinits
+    - goconst
+    - godox
+    - importas
+    - nestif
+    - nolintlint
+    - predeclared
+    - testpackage
+    # - wrapcheck (consider adding)
+  fast: false
+
+linters-settings:
+  errcheck:
+    # report about not checking of errors in type assertions: `a := b.(MyStruct)`;
+    check-type-assertions: false
+
+    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`;
+    check-blank: true
+
+    # path to a file containing a list of functions to exclude from checking
+    # see https://github.com/kisielk/errcheck#excluding-functions for details
+    exclude: .github/config/lint/errcheck.exclude.txt
+  govet:
+    # report about shadowed variables
+    check-shadowing: true
+  gofumpt:
+    # Choose whether or not to use the extra rules that are disabled by default
+    extra-rules: true
+  goimports:
+  maligned:
+    # print struct with more effective memory layout or not, false by default
+    suggest-new: true
+  misspell:
+    # Correct spellings using locale preferences for US or UK.
+    # Default is to use a neutral variety of English.
+    # Setting locale to US will correct the British spelling of 'colour' to 'color'.
+    locale: US
+    ignore-words:
+      - cancelled
+  lll:
+    # max line length, lines longer will be reported. Default is 120.
+    # '\t' is counted as 1 character by default, and can be changed with the tab-width option
+    line-length: 160
+    # tab width in spaces. Default to 1.
+    tab-width: 1
+  unused:
+    # treat code as a program (not a library) and report unused exported identifiers; default is false.
+    # XXX: if you enable this setting, unused will report a lot of false-positives in text editors:
+    # if it's called for subdir of a project it can't find funcs usages. All text editor integrations
+    # with golangci-lint call it on a directory with the changed file.
+    check-exported: false
+  unparam:
+  gocritic:
+    enabled-checks:
+      - appendCombine
+      - argOrder
+      - assignOp
+      - badCond
+      - boolExprSimplify
+      - builtinShadow
+      - captLocal
+      - caseOrder
+      - codegenComment
+      - commentedOutCode
+      - commentedOutImport
+      - defaultCaseOrder
+      - deprecatedComment
+      - docStub
+      - dupArg
+      - dupBranchBody
+      - dupCase
+      - dupSubExpr
+      - elseif
+      - emptyFallthrough
+      - equalFold
+      - flagDeref
+      - flagName
+      - hexLiteral
+      - indexAlloc
+      - initClause
+      - methodExprCall
+      - nilValReturn
+      - octalLiteral
+      - offBy1
+      - rangeExprCopy
+      - regexpMust
+      - sloppyLen
+      - stringXbytes
+      - switchTrue
+      - typeAssertChain
+      - typeSwitchVar
+      - typeUnparen
+      - underef
+      - unlambda
+      - unslice
+      - valSwap
+      - weakCond
+
+      # Unused
+      # - unnecessaryBlock
+      # - yodaStyleExpr
+      # - appendAssign
+      # - commentFormatting
+      # - emptyStringTest
+      # - exitAfterDefer
+      # - ifElseChain
+      # - hugeParam
+      # - importShadow
+      # - nestingReduce
+      # - paramTypeCombine
+      # - ptrToRefParam
+      # - rangeValCopy
+      # - singleCaseSwitch
+      # - sloppyReassign
+      # - unlabelStmt
+      # - unnamedResult
+      # - wrapperFunc
+  staticcheck:
+    # Select the Go version to target. The default is '1.13'.
+    go: "1.19"
+  stylecheck:
+    # Select the Go version to target. The default is '1.13'.
+    go: "1.19"
+  godox:
+    # report any comments starting with keywords, this is useful for TODO or FIXME comments that
+    # might be left in the code accidentally and should be resolved before merging
+    keywords:
+      - TODO
+      - HACK
+      - FIX
+      - FIXME
+      - TEMP
+      - TMP
+  nolintlint:
+    # Disable to ensure that nolint directives don't have a leading space. Default is true.
+    allow-leading-space: false
+    # Exclude following linters from requiring an explanation.  Default is [].
+    allow-no-explanation: [errcheck]
+    # Enable to require an explanation of nonzero length after each nolint directive. Default is false.
+    require-explanation: true
+    # Enable to require nolint directives to mention the specific linter being suppressed. Default is false.
+    require-specific: true

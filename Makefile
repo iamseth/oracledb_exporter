@@ -5,6 +5,7 @@ MAJOR_VERSION  ?= 21
 MINOR_VERSION  ?= 7
 ORACLE_VERSION ?= $(MAJOR_VERSION).$(MINOR_VERSION)
 PKG_VERSION    ?= $(ORACLE_VERSION).0.0.0-1.el8.$(ARCH)
+GLIBC_VERSION	 ?= 2.29-r0
 LDFLAGS        := -X main.Version=$(VERSION)
 GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
 RPM_VERSION    ?= $(ORACLE_VERSION).0.0.0-1
@@ -51,7 +52,7 @@ darwin: oci.pc
 	cp default-metrics.toml ./dist/oracledb_exporter.$(VERSION).darwin-${GOARCH}
 	(cd dist ; tar cfz oracledb_exporter.$(VERSION).darwin-${GOARCH}.tar.gz oracledb_exporter.$(VERSION).darwin-${GOARCH})
 
-local-build:  linux
+local-build: linux
 
 build: docker
 
@@ -63,7 +64,7 @@ test:
 	@PKG_CONFIG_PATH=${PWD} go test $$(go list ./... | grep -v /vendor/)
 
 clean:
-	rm -rf ./dist sgerrand.rsa.pub glibc-2.29-r0.apk oci8.pc
+	rm -rf ./dist sgerrand.rsa.pub glibc.apk oci8.pc
 
 docker: ubuntu-image alpine-image oraclelinux-image
 
@@ -78,8 +79,8 @@ push-images:
 sgerrand.rsa.pub:
 	wget -q -O sgerrand.rsa.pub  https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub
 
-glibc-2.29-r0.apk:
-	wget -q -O glibc-2.29-r0.apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.29-r0/glibc-2.29-r0.apk
+glibc.apk:
+	wget -q -O glibc-$(GLIBC_VERSION).apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$(GLIBC_VERSION)/glibc-$(GLIBC_VERSION).apk
 
 oraclelinux-image:
 	docker build -f oraclelinux/Dockerfile $(BUILD_ARGS) -t "$(IMAGE_NAME):$(VERSION)-oraclelinux" .
@@ -91,7 +92,7 @@ ubuntu-image: $(ORA_RPM)
 	docker build $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_NAME):$(VERSION)_legacy-tablespace" .
 	docker tag "$(IMAGE_NAME):$(VERSION)" "$(IMAGE_NAME):latest"
 
-alpine-image: $(ORA_RPM) sgerrand.rsa.pub glibc-2.29-r0.apk
+alpine-image: $(ORA_RPM) sgerrand.rsa.pub glibc.apk
 	docker build -f alpine/Dockerfile $(BUILD_ARGS) -t "$(IMAGE_NAME):$(VERSION)-alpine" .
 	docker build -f alpine/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_NAME):$(VERSION)-alpine_legacy-tablespace" .
 	docker tag "$(IMAGE_NAME):$(VERSION)-alpine" "$(IMAGE_NAME):alpine"

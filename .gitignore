@@ -4,3 +4,4 @@ dist/
 *.apk
 *.pub
 oci8.pc
+release.yml

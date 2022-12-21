@@ -1,7 +1,7 @@
-Operating principles
-====================
+# Operating principles
 
 The exporter itself is dumb and does not do much. The initialization is done as follows:
+
 - Parse flags options
 - Load the default toml file (default-metrics.toml) and store each metrics in a Metric struct
 - Load the custom toml file (if a custom toml file is given)
