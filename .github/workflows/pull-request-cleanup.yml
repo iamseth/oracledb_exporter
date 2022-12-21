@@ -1,0 +1,33 @@
+name: Pull Request Cleanup
+
+on:
+  pull_request_target:
+    types: [closed]
+
+env:
+  PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+  PULL_REQUEST_BRANCH: ${{ github.head_ref }}
+  IMAGE_NAME: "ghcr.io/${{ github.repository }}"
+  PACKAGE_NAME: oracledb_exporter
+
+jobs:
+  cleanup-ghcr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cleanup versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          GHCR_TOKEN=$(echo "${{ env.GH_TOKEN }}" }} | base64)
+          # To list tags
+          curl -H "Authorization: Bearer {GHCR_TOKEN}" https://ghcr.io/v2/${{ env.IMAGE_NAME }}/tags/list > versions.json
+          VERSIONS=$(jq -rM 'map(select(test("rc.pr-${{ github.event.pull_request.number }}-")))[]' versions.json)
+          for VERSION in ${VERSIONS}
+          do
+            echo "deleting ${IMAGE_NAME}:${VERSION}"
+
+            echo gh api \
+              --method DELETE \
+              -H "Accept: application/vnd.github+json" \
+              "/users/${{ github.repository_owner }}/packages/container/${{ env.PACKAGE_NAME }}/versions/$VERSION"
+          done
