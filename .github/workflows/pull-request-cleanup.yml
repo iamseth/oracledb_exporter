@@ -22,6 +22,7 @@ jobs:
           # To list tags
           curl -H "Authorization: Bearer {GHCR_TOKEN}" https://ghcr.io/v2/${{ env.IMAGE_NAME }}/tags/list > versions.json
           cat versions.json
+
           VERSIONS=$(jq -rM 'map(select(test("rc.pr-${{ github.event.pull_request.number }}-")))[]' versions.json)
           for VERSION in ${VERSIONS}
           do
