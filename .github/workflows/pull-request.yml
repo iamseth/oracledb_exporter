@@ -6,6 +6,10 @@ on:
     branches:
       - main
       - master
+    paths-ignore:
+      - ".github/**/*.yml"
+      - "**/*.md"
+      - "README.md"
 
 concurrency:
   group: ${{ github.head_ref }}/${{ github.ref }}

@@ -14,6 +14,7 @@ Please delete options that are not relevant.
 - [ ] This change requires a documentation update
 
 # How Has This Been Tested?
+
 <!--- Please describe in detail how you tested your changes. -->
 <!--- Include details of your testing environment, and the tests you ran to -->
 <!--- see how your change affects other areas of the code, etc. -->
@@ -30,3 +31,4 @@ Please delete options that are not relevant.
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally with my changes
 - [ ] Any dependent changes have been merged and published in downstream modules
+- [ ] Updated version in Makefile respecting [semver v2](https://semver.org/spec/v2.0.0.html)

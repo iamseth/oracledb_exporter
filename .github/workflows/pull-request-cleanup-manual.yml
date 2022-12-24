@@ -1,8 +1,20 @@
-name: Pull Request Cleanup
+name: "[Manual] Pull Request Cleanup"
 
 on:
-  pull_request:
-    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pattern:
+        description: |
+          Tags pattern filter
+        required: true
+        type: string
+        default: "rc.pr-"
+      # delete-pre-releases:
+      #   description: |
+      #     Should be deleted all pre-releases/tags?
+      #   required: true
+      #   type: boolean
+      #   default: true
 
 env:
   PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -16,6 +28,7 @@ env:
 jobs:
   cleanup-ghcr:
     runs-on: ubuntu-latest
+    name: "cleanup-ghcr / ${{ github.event.inputs.pattern }}"
     steps:
       - name: Cleanup versions
         env:
