@@ -22,7 +22,7 @@ env:
 jobs:
   cleanup-ghcr:
     runs-on: ubuntu-latest
-    name: "cleanup-ghcr / ${{ github.event.inputs.pattern }}"
+    name: "cleanup ghcr / ${{ github.event.inputs.pattern }}"
     steps:
       - name: Cleanup versions
         env:
@@ -55,6 +55,9 @@ jobs:
               "/users/${{ env.USERNAME }}/packages/${{ env.PACKAGE_TYPE }}/${{ env.PACKAGE_NAME }}/versions/$VERSION" \
               --input -
           done
+  cleanup-pre-releases:
+    runs-on: ubuntu-latest
+    name: "cleanup pre-releases / ${{ github.event.inputs.pattern }}"
       - name: Cleanup releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
