@@ -5,5 +5,4 @@ dist/
 *.pub
 *.key
 oci8.pc
-release.yml
 *.skip
