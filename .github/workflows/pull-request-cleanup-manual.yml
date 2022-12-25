@@ -46,9 +46,8 @@ jobs:
               '.[] | select(.id | tostring | test($VERSION)) | .name' \
               versions.json
             )
-            echo "deleting ${IMAGE_NAME}:${TAG}"
-            echo "digest=${DIGEST}"
-            echo "deleting PACKAGE_VERSION_ID=${VERSION}"
+            echo "deleting ${IMAGE_NAME}:${TAG} with digest=${DIGEST}"
+            echo "deleting package PACKAGE_VERSION_ID=${VERSION}"
             # https://github.com/cli/cli/issues/3937
             echo -n | gh api \
               --silent \

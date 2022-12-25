@@ -16,6 +16,7 @@ env:
 jobs:
   cleanup-ghcr:
     runs-on: ubuntu-latest
+    name: "cleanup-ghcr / ${{ github.event.inputs.pattern }}"
     steps:
       - name: Cleanup versions
         env:
@@ -26,7 +27,7 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "/users/${{ env.USERNAME }}/packages/${{ env.PACKAGE_TYPE }}/${{ env.PACKAGE_NAME }}/versions" > versions.json
 
-          VERSIONS=$(jq -rM '.[] | select(.metadata.container.tags[] | test("${{ github.event.inputs.pattern }}")) | .id' versions.json)
+          VERSIONS=$(jq -r '.[] | select(.metadata.container.tags[] | test("${{ github.event.inputs.pattern }}")) | .id' versions.json)
           for VERSION in $(echo -n "$VERSIONS")
           do
             TAG=$(jq -r \
@@ -39,14 +40,39 @@ jobs:
               '.[] | select(.id | tostring | test($VERSION)) | .name' \
               versions.json
             )
-            echo "deleting ${IMAGE_NAME}:${TAG}"
-            echo "digest=${DIGEST}"
-            echo "deleting PACKAGE_VERSION_ID=${VERSION}"
+            echo "deleting ${IMAGE_NAME}:${TAG} with digest=${DIGEST}"
+            echo "deleting package PACKAGE_VERSION_ID=${VERSION}"
             # https://github.com/cli/cli/issues/3937
             echo -n | gh api \
               --silent \
               --method DELETE \
               -H "Accept: application/vnd.github+json" \
               "/users/${{ env.USERNAME }}/packages/${{ env.PACKAGE_TYPE }}/${{ env.PACKAGE_NAME }}/versions/$VERSION" \
+              --input -
+          done
+      - name: Cleanup releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/releases" \
+            --jq='.[] | select(.prerelease=false) | select(.tag_name | test("${{ github.event.inputs.pattern }}"))' > versions.json
+
+          VERSIONS=$(jq -r '.id' versions.json)
+          for VERSION in $(echo -n "$VERSIONS")
+          do
+            RELEASE=$(jq -r \
+              --arg VERSION "$VERSION" \
+              'select(.id | tostring | test($VERSION)) | .name' \
+              versions.json
+            )
+            echo "deleting release \"$RELEASE\" with RELEASE_ID=${VERSION}"
+            # https://github.com/cli/cli/issues/3937
+            echo -n | gh api \
+              --silent \
+              --method DELETE \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${{ github.repository }}/releases/$VERSION" \
               --input -
           done
