@@ -9,12 +9,12 @@ on:
         required: true
         type: string
         default: "rc.pr-"
-      # delete-pre-releases:
-      #   description: |
-      #     Should be deleted all pre-releases/tags?
-      #   required: true
-      #   type: boolean
-      #   default: true
+      delete-pre-releases:
+        description: |
+          Should be deleted all pre-releases/tags?
+        required: true
+        type: boolean
+        default: true
 
 env:
   PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -52,9 +52,15 @@ jobs:
               '.[] | select(.id | tostring | test($VERSION)) | .name' \
               versions.json
             )
+            RELEASE_ID=$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${{ github.repository }}/releases/tags/$TAG" \
+              --jq='.id'
+            )
             echo "deleting ${IMAGE_NAME}:${TAG}"
             echo "digest=${DIGEST}"
             echo "deleting PACKAGE_VERSION_ID=${VERSION}"
+            echo "deleting RELEASE_ID=${RELEASE_ID}"
             # https://github.com/cli/cli/issues/3937
             echo -n | gh api \
               --silent \
@@ -62,4 +68,12 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               "/users/${{ env.USERNAME }}/packages/${{ env.PACKAGE_TYPE }}/${{ env.PACKAGE_NAME }}/versions/$VERSION" \
               --input -
+            if [ "${{ github.event.inputs.delete-pre-releases }}" = "true" ]; then
+              echo -n | gh api \
+                --silent \
+                --method DELETE \
+                -H "Accept: application/vnd.github+json" \
+                "/repos/${{ github.repository }}/releases/$RELEASE_ID" \
+                --input -
+            fi
           done

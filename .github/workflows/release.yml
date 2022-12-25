@@ -28,18 +28,33 @@ jobs:
       go-version: ${{ fromJson(steps.config.outputs.config).go-version }}
       deploy-pull-request: ${{ fromJson(steps.config.outputs.config).deploy.pull-request }}
       deploy-sign-docker-image: ${{ fromJson(steps.config.outputs.config).deploy.sign-docker-image }}
-      deploy-release-images: ${{ steps.deploy-images-profiles.outputs.images }}
+      deploy-pre-release-matrix: ${{ steps.pre-release-matrix.outputs.matrix }}
+      deploy-release-matrix: ${{ steps.release-matrix.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           ref: ${{ env.BRANCH }}
+
       - name: Read config
         id: config
         run: echo "config=$(jq -M -c '.' ./.github/workflow-config.json)" >> $GITHUB_OUTPUT
-      - name: List post-release profiles
+
+      - name: List Pre-release profiles
+        id: deploy-pr-images-profiles
+        run: echo "profiles=$(jq -c -M '.deploy."pull-request-images"' .github/workflow-config.json)" >> $GITHUB_OUTPUT
+
+      - name: Deploy pre-release matrix
+        id: pre-release-matrix
+        run: echo 'matrix={"include":${{ steps.deploy-pr-images-profiles.outputs.profiles }} }' >> $GITHUB_OUTPUT
+
+      - name: List release profiles
         id: deploy-images-profiles
-        run: echo "images=$(jq -c -M '.deploy."release-images"' .github/workflow-config.json)" >> $GITHUB_OUTPUT
+        run: echo "profiles=$(jq -c -M '.deploy."release-images"' .github/workflow-config.json)" >> $GITHUB_OUTPUT
+
+      - name: Deploy release matrix
+        id: release-matrix
+        run: echo 'matrix={"include":${{ steps.deploy-images-profiles.outputs.profiles }} }' >> $GITHUB_OUTPUT
 
   build:
     runs-on: ubuntu-latest
@@ -137,7 +152,7 @@ jobs:
         with:
           ref: ${{ env.BRANCH }}
 
-      - name: Set release version
+      - name: Set releasw version
         id: version
         run: echo "version=${{ needs.build.outputs.version }}" >> $GITHUB_OUTPUT
 
@@ -147,15 +162,8 @@ jobs:
           name: application
           path: "."
 
-      - name: Unpack artifact
-        run: tar -xzvf application.tar.gz
-
-      - name: generate changelog
-        continue-on-error: true
-        uses: metcalfc/changelog-generator@v4.0.1
-        id: changelog
-        with:
-          myToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rename artifact
+        run: mv application.tar.gz ${{ github.event.repository.name }}.tar.gz
 
       - name: Create release
         uses: softprops/action-gh-release@v1
@@ -165,23 +173,19 @@ jobs:
           tag_name: ${{ steps.version.outputs.version }}
           token: ${{ secrets.GITHUB_TOKEN }}
           body: ${{ steps.changelog.outputs.changelog }}
+          files: |
+            ./${{ github.event.repository.name }}.tar.gz
           draft: false
           prerelease: false
-
-      - name: Upload release assets
-        uses: actions/upload-release-asset@v1
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: ./application.tar.gz
-          asset_name: ${{ github.event.repository.name }}.tar.gz
-          asset_content_type: application/gzip
+          generate_release_notes: true
 
   deploy:
+    name: deploy-[${{ matrix.name }}]
     runs-on: ubuntu-latest
-    if: ${{ !failure() && needs.release.result == 'success' }}
+    strategy:
+      max-parallel: 1
+      matrix: ${{ fromJson(needs.config.outputs.deploy-release-matrix) }}
+    if: ${{ !failure() && needs.release.result == 'success' && needs.config.outputs.deploy-pull-request == 'true' }}
     needs:
       - config
       - build
@@ -212,10 +216,9 @@ jobs:
       - name: Build image
         env:
           VERSION: "${{ needs.release.outputs.version }}"
-        run: make ubuntu-image
+        run: make ${{ matrix.name }}-image
 
       - name: Log in to registry
-        # This is where you will update the personal access token to GITHUB_TOKEN
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u $ --password-stdin
 
       - name: Push image
@@ -223,9 +226,10 @@ jobs:
         env:
           VERSION: "${{ needs.release.outputs.version }}"
         run: |
-          make push-ubuntu-image
+          make push-${{ matrix.name }}-image
+          TAG_SUFFIX=$(echo "-${{ matrix.name }}" | sed s/-ubuntu//)
           echo "image-id=$IMAGE_NAME" >> $GITHUB_OUTPUT
-          echo "image-version=$VERSION" >> $GITHUB_OUTPUT
+          echo "image-version=${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
 
       - name: Setup cosign
         if: ${{ needs.config.outputs.deploy-sign-docker-image == 'true' }}
@@ -242,7 +246,7 @@ jobs:
         env:
           COSIGN_PASSWORD: ""
           VERSION: "${{ needs.release.outputs.version }}"
-        run: make sign-ubuntu-image
+        run: make sign-${{ matrix.name }}-image
 
       - name: Container scan
         uses: aquasecurity/trivy-action@0.8.0
@@ -260,3 +264,4 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: "trivy-results.sarif"
+          category: trivy-${{ matrix.name }}
