@@ -15,7 +15,7 @@ env:
 jobs:
   cleanup-ghcr:
     runs-on: ubuntu-latest
-    name: "cleanup ghcr / rc.pr-${{ env.PULL_REQUEST_NUMBER }}"
+    name: "cleanup ghcr"
     steps:
       - name: Cleanup versions
         env:
@@ -50,7 +50,7 @@ jobs:
           done
   cleanup-pre-releases:
     runs-on: ubuntu-latest
-    name: "cleanup pre-releases / rc.pr-${{ env.PULL_REQUEST_NUMBER }}"
+    name: "cleanup pre-releases"
     steps:
       - name: Cleanup releases
         env:
