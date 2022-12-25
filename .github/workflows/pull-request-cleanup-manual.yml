@@ -26,12 +26,13 @@ jobs:
       - name: Cleanup versions
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILTER: ${{ github.event.inputs.pattern }}
         run: |
           gh api \
             -H "Accept: application/vnd.github+json" \
             "/users/${{ env.USERNAME }}/packages/${{ env.PACKAGE_TYPE }}/${{ env.PACKAGE_NAME }}/versions" > versions.json
 
-          VERSIONS=$(jq -r '.[] | select(.metadata.container.tags[] | test("${{ github.event.inputs.pattern }}")) | .id' versions.json)
+          VERSIONS=$(jq -r '.[] | select(.metadata.container.tags[] | test("${{ env.FILTER }}")) | .id' versions.json)
           for VERSION in $(echo -n "$VERSIONS")
           do
             TAG=$(jq -r \
@@ -61,11 +62,12 @@ jobs:
       - name: Cleanup releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILTER: ${{ github.event.inputs.pattern }}
         run: |
           gh api \
             -H "Accept: application/vnd.github+json" \
             "/repos/${{ github.repository }}/releases" \
-            --jq='.[] | select(.prerelease=false) | select(.tag_name | test("${{ github.event.inputs.pattern }}"))' > versions.json
+            --jq='.[] | select(.prerelease=false) | select(.tag_name | test("${{ env.FILTER }}"))' > versions.json
 
           VERSIONS=$(jq -r '.id' versions.json)
           for VERSION in $(echo -n "$VERSIONS")
