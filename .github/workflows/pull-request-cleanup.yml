@@ -10,13 +10,12 @@ env:
   IMAGE_NAME: "ghcr.io/${{ github.repository }}"
   PACKAGE_NAME: oracledb_exporter
   PACKAGE_TYPE: container
-  TAG_PATTERN: ${{ github.event.inputs.pattern }}
   USERNAME: ${{ github.repository_owner }}
 
 jobs:
   cleanup-ghcr:
     runs-on: ubuntu-latest
-    name: "cleanup ghcr / ${{ github.event.inputs.pattern }}"
+    name: "cleanup ghcr / rc.pr-${{ env.PULL_REQUEST_NUMBER }}"
     steps:
       - name: Cleanup versions
         env:
@@ -26,7 +25,7 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "/users/${{ env.USERNAME }}/packages/${{ env.PACKAGE_TYPE }}/${{ env.PACKAGE_NAME }}/versions" > versions.json
 
-          VERSIONS=$(jq -r '.[] | select(.metadata.container.tags[] | test("${{ github.event.inputs.pattern }}")) | .id' versions.json)
+          VERSIONS=$(jq -r '.[] | select(.metadata.container.tags[] | test("rc.pr-${{ env.PULL_REQUEST_NUMBER }}")) | .id' versions.json)
           for VERSION in $(echo -n "$VERSIONS")
           do
             TAG=$(jq -r \
@@ -51,7 +50,7 @@ jobs:
           done
   cleanup-pre-releases:
     runs-on: ubuntu-latest
-    name: "cleanup pre-releases / ${{ github.event.inputs.pattern }}"
+    name: "cleanup pre-releases / rc.pr-${{ env.PULL_REQUEST_NUMBER }}"
     steps:
       - name: Cleanup releases
         env:
@@ -60,7 +59,7 @@ jobs:
           gh api \
             -H "Accept: application/vnd.github+json" \
             "/repos/${{ github.repository }}/releases" \
-            --jq='.[] | select(.prerelease=false) | select(.tag_name | test("${{ github.event.inputs.pattern }}"))' > versions.json
+            --jq='.[] | select(.prerelease=false) | select(.tag_name | test("rc.pr-${{ env.PULL_REQUEST_NUMBER }}"))' > versions.json
 
           VERSIONS=$(jq -r '.id' versions.json)
           for VERSION in $(echo -n "$VERSIONS")

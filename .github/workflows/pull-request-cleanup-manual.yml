@@ -16,7 +16,6 @@ env:
   IMAGE_NAME: "ghcr.io/${{ github.repository }}"
   PACKAGE_NAME: oracledb_exporter
   PACKAGE_TYPE: container
-  TAG_PATTERN: ${{ github.event.inputs.pattern }}
   USERNAME: ${{ github.repository_owner }}
 
 jobs:
