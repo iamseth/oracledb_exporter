@@ -75,7 +75,7 @@ jobs:
               versions.json
             )
             echo "deleting release \"$RELEASE\" with RELEASE_ID=${VERSION}"
-            https://github.com/cli/cli/issues/3937
+            # https://github.com/cli/cli/issues/3937
             echo -n | gh api \
               --silent \
               --method DELETE \
