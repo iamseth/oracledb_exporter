@@ -80,6 +80,6 @@ jobs:
               --silent \
               --method DELETE \
               -H "Accept: application/vnd.github+json" \
-              "/repos/${{ github.repository }}/releases/$RELEASE_ID" \
+              "/repos/${{ github.repository }}/releases/$VERSION" \
               --input -
           done
