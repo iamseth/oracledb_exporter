@@ -9,12 +9,6 @@ on:
         required: true
         type: string
         default: "rc.pr-"
-      delete-pre-releases:
-        description: |
-          Should be deleted all pre-releases/tags?
-        required: true
-        type: boolean
-        default: true
 
 env:
   PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -39,7 +33,7 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "/users/${{ env.USERNAME }}/packages/${{ env.PACKAGE_TYPE }}/${{ env.PACKAGE_NAME }}/versions" > versions.json
 
-          VERSIONS=$(jq -rM '.[] | select(.metadata.container.tags[] | test("${{ github.event.inputs.pattern }}")) | .id' versions.json)
+          VERSIONS=$(jq -r '.[] | select(.metadata.container.tags[] | test("${{ github.event.inputs.pattern }}")) | .id' versions.json)
           for VERSION in $(echo -n "$VERSIONS")
           do
             TAG=$(jq -r \
@@ -52,15 +46,9 @@ jobs:
               '.[] | select(.id | tostring | test($VERSION)) | .name' \
               versions.json
             )
-            RELEASE_ID=$(gh api \
-              -H "Accept: application/vnd.github+json" \
-              "/repos/${{ github.repository }}/releases/tags/$TAG" \
-              --jq='.id'
-            )
             echo "deleting ${IMAGE_NAME}:${TAG}"
             echo "digest=${DIGEST}"
             echo "deleting PACKAGE_VERSION_ID=${VERSION}"
-            echo "deleting RELEASE_ID=${RELEASE_ID}"
             # https://github.com/cli/cli/issues/3937
             echo -n | gh api \
               --silent \
@@ -68,12 +56,30 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               "/users/${{ env.USERNAME }}/packages/${{ env.PACKAGE_TYPE }}/${{ env.PACKAGE_NAME }}/versions/$VERSION" \
               --input -
-            if [ "${{ github.event.inputs.delete-pre-releases }}" = "true" ]; then
-              echo -n | gh api \
-                --silent \
-                --method DELETE \
-                -H "Accept: application/vnd.github+json" \
-                "/repos/${{ github.repository }}/releases/$RELEASE_ID" \
-                --input -
-            fi
+          done
+      - name: Cleanup releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/releases" \
+            --jq='.[] | select(.prerelease=false) | select(.tag_name | test("${{ github.event.inputs.pattern }}"))' > versions.json
+
+          VERSIONS=$(jq -r '.id' versions.json)
+          for VERSION in $(echo -n "$VERSIONS")
+          do
+            RELEASE=$(jq -r \
+              --arg VERSION "$VERSION" \
+              'select(.id | tostring | test($VERSION)) | .name' \
+              versions.json
+            )
+            echo "deleting release \"$RELEASE\" with RELEASE_ID=${VERSION}"
+            https://github.com/cli/cli/issues/3937
+            echo -n | gh api \
+              --silent \
+              --method DELETE \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${{ github.repository }}/releases/$RELEASE_ID" \
+              --input -
           done
