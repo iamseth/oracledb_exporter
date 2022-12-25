@@ -3,7 +3,7 @@ OS_TYPE        ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH_TYPE      ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(ARCH)))
 GOOS           ?= $(shell go env GOOS)
 GOARCH         ?= $(shell go env GOARCH)
-VERSION        ?= 0.4.3
+VERSION        ?= 0.4.4
 MAJOR_VERSION  ?= 21
 MINOR_VERSION  ?= 8
 ORACLE_VERSION ?= $(MAJOR_VERSION).$(MINOR_VERSION)
@@ -90,9 +90,13 @@ glibc.apk:
 	wget -q -O glibc-$(GLIBC_VERSION).apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$(GLIBC_VERSION)/glibc-$(GLIBC_VERSION).apk
 
 oraclelinux-image:
-	docker build --progress=plain -f oraclelinux/Dockerfile $(BUILD_ARGS) -t "$(IMAGE_ID)-oraclelinux" .
-	docker build --progress=plain -f oraclelinux/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)-oraclelinux_legacy-tablespace" .
-	docker tag "$(IMAGE_ID)-oraclelinux" "$(IMAGE_NAME):oraclelinux"
+	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)-oraclelinux" > /dev/null; then \
+		echo "Image \"$(IMAGE_ID)-oraclelinux\" already exists on ghcr.io"; \
+	else \
+		docker build --progress=plain -f oraclelinux/Dockerfile $(BUILD_ARGS) -t "$(IMAGE_ID)-oraclelinux" . && \
+		docker build --progress=plain -f oraclelinux/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)-oraclelinux_legacy-tablespace" . && \
+		docker tag "$(IMAGE_ID)-oraclelinux" "$(IMAGE_NAME):oraclelinux"; \
+	fi
 
 push-oraclelinux-image:
 	docker push $(IMAGE_ID)-oraclelinux
@@ -108,9 +112,13 @@ else
 endif
 
 ubuntu-image: $(ORA_RPM)
-	docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)" .
-	docker build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)_legacy-tablespace" .
-	docker tag "$(IMAGE_ID)" "$(IMAGE_ID_LATEST)"
+	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)" > /dev/null; then \
+		echo "Image \"$(IMAGE_ID)\" already exists on ghcr.io"; \
+	else \
+		docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)" . && \
+		docker build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)_legacy-tablespace" . && \
+		docker tag "$(IMAGE_ID)" "$(IMAGE_ID_LATEST)"; \
+	fi
 
 push-ubuntu-image:
 	docker push $(IMAGE_ID)
@@ -127,9 +135,13 @@ else
 endif
 
 alpine-image: $(ORA_RPM)
-	docker build --progress=plain -f alpine/Dockerfile $(BUILD_ARGS) -t "$(IMAGE_ID)-alpine" .
-	docker build --progress=plain -f alpine/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)-alpine_legacy-tablespace" .
-	docker tag "$(IMAGE_ID)-alpine" "$(IMAGE_NAME):alpine"
+	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)-alpine" > /dev/null; then \
+		echo "Image \"$(IMAGE_ID)-alpine\" already exists on ghcr.io"; \
+	else \
+		docker build --progress=plain -f alpine/Dockerfile $(BUILD_ARGS) -t "$(IMAGE_ID)-alpine" . && \
+		docker build --progress=plain -f alpine/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)-alpine_legacy-tablespace" . && \
+		docker tag "$(IMAGE_ID)-alpine" "$(IMAGE_NAME):alpine"; \
+	fi
 
 push-alpine-image:
 	docker push $(IMAGE_ID)-alpine
