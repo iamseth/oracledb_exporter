@@ -58,6 +58,7 @@ jobs:
   cleanup-pre-releases:
     runs-on: ubuntu-latest
     name: "cleanup pre-releases / ${{ github.event.inputs.pattern }}"
+    steps:
       - name: Cleanup releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
