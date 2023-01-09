@@ -88,7 +88,6 @@ In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle
 for your operating system. Only the basic version is required for execution.
 
 # Running
-
 Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting.
 DATA_SOURCE_NAME should be in Oracle EZCONNECT format:  
  https://docs.oracle.com/en/database/oracle/oracle-database/19/netag/configuring-naming-methods.html#GUID-B0437826-43C1-49EC-A94D-B650B6A4A6EE  
@@ -109,6 +108,20 @@ export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/servic
 export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/+ASM?as=sysdba
 # Then run the exporter
 /path/to/binary/oracledb_exporter --log.level error --web.listen-address 0.0.0.0:9161
+```
+## Default-metrics requirement
+Make sure to grant `SYS` privilege on `SELECT` statement for the monitoring user, on the following tables.
+```
+dba_tablespace_usage_metrics
+dba_tablespaces
+v$system_wait_class
+v$asm_diskgroup_stat
+v$datafile
+v$sysstat
+v$process
+v$waitclassmetric
+v$session
+v$resource_limit
 ```
 
 # Integration with System D
