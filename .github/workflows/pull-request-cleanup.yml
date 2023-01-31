@@ -1,0 +1,86 @@
+name: Pull Request Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+  PULL_REQUEST_BRANCH: ${{ github.head_ref }}
+  IMAGE_NAME: "ghcr.io/${{ github.repository }}"
+  PACKAGE_NAME: oracledb_exporter
+  PACKAGE_TYPE: container
+  USERNAME: ${{ github.repository_owner }}
+
+jobs:
+  cleanup-ghcr:
+    runs-on: ubuntu-latest
+    name: "cleanup ghcr"
+    steps:
+      - name: Cleanup versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILTER: rc.pr-${{ env.PULL_REQUEST_NUMBER }}
+        run: |
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/users/${{ env.USERNAME }}/packages/${{ env.PACKAGE_TYPE }}/${{ env.PACKAGE_NAME }}/versions" > versions.json
+
+          VERSIONS=$(jq -r '.[] | select(.metadata.container.tags[] | test("${{ env.FILTER }}")) | .id' versions.json)
+          for VERSION in $(echo -n "$VERSIONS")
+          do
+            TAG=$(jq -r \
+              --arg VERSION "$VERSION" \
+              '.[] | select(.id | tostring | test($VERSION)) | .metadata.container.tags | join(",")' \
+              versions.json
+            )
+            DIGEST=$(jq -r \
+              --arg VERSION "$VERSION" \
+              '.[] | select(.id | tostring | test($VERSION)) | .name' \
+              versions.json
+            )
+            echo "deleting ${IMAGE_NAME}:${TAG} with digest=${DIGEST}"
+            echo "deleting package PACKAGE_VERSION_ID=${VERSION}"
+            # https://github.com/cli/cli/issues/3937
+            echo -n | gh api \
+              --silent \
+              --method DELETE \
+              -H "Accept: application/vnd.github+json" \
+              "/users/${{ env.USERNAME }}/packages/${{ env.PACKAGE_TYPE }}/${{ env.PACKAGE_NAME }}/versions/$VERSION" \
+              --input -
+          done
+  cleanup-pre-releases:
+    runs-on: ubuntu-latest
+    name: "cleanup pre-releases"
+    steps:
+      - name: Cleanup releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILTER: rc.pr-${{ env.PULL_REQUEST_NUMBER }}
+        run: |
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/releases" \
+            --jq='.[] | select(.prerelease=false) | select(.tag_name | test("${{ env.FILTER }}"))' > versions.json
+
+          VERSIONS=$(jq -r '.id' versions.json)
+          for VERSION in $(echo -n "$VERSIONS")
+          do
+            RELEASE=$(jq -r \
+              --arg VERSION "$VERSION" \
+              'select(.id | tostring | test($VERSION)) | .name' \
+              versions.json
+            )
+            echo "deleting release \"$RELEASE\" with RELEASE_ID=${VERSION}"
+            # https://github.com/cli/cli/issues/3937
+            echo -n | gh api \
+              --silent \
+              --method DELETE \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${{ github.repository }}/releases/$VERSION" \
+              --input -
+          done

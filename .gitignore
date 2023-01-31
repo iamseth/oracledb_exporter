@@ -3,4 +3,6 @@ dist/
 .idea
 *.apk
 *.pub
+*.key
 oci8.pc
+*.skip

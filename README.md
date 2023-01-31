@@ -4,7 +4,7 @@
 [![GoDoc](https://godoc.org/github.com/iamseth/oracledb_exporter?status.svg)](http://godoc.org/github.com/iamseth/oracledb_exporter)
 [![Report card](https://goreportcard.com/badge/github.com/iamseth/oracledb_exporter)](https://goreportcard.com/badge/github.com/iamseth/oracledb_exporter)
 
-##### Table of Contents  
+##### Table of Contents
 
 [Description](#description)  
 [Installation](#installation)  
@@ -66,9 +66,9 @@ docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE
 
 Different Linux Distros:
 
-* `x.y.z` - Ubuntu Linux image
-* `x.y.z-oraclelinux` - Oracle Enterprise Linux image
-* `x.y.z-Alpine` - Alpine Linux image
+- `x.y.z` - Ubuntu Linux image
+- `x.y.z-oraclelinux` - Oracle Enterprise Linux image
+- `x.y.z-Alpine` - Alpine Linux image
 
 Forked Version:
 All the above docker images have a duplicate image tag ending in
@@ -155,8 +155,6 @@ ExecStart=/usr/local/bin/oracledb_exporter  \
 WantedBy=multi-user.target
 ```
 
-
-
 Then tell System D to read files:
 
     systemctl daemon-reload
@@ -196,7 +194,7 @@ Usage of oracledb_exporter:
 # Default metrics
 
 This exporter comes with a set of default metrics defined in **default-metrics.toml**. You can modify this file or
-provide a different one using ``default.metrics`` option.
+provide a different one using `default.metrics` option.
 
 # Custom metrics
 
@@ -204,11 +202,13 @@ provide a different one using ``default.metrics`` option.
 
 This exporter does not have the metrics you want? You can provide new one using TOML file. To specify this file to the
 exporter, you can:
-- Use ``--custom.metrics`` flag followed by the TOML file
-- Export CUSTOM_METRICS variable environment (``export CUSTOM_METRICS=my-custom-metrics.toml``)
+
+- Use `--custom.metrics` flag followed by the TOML file
+- Export CUSTOM_METRICS variable environment (`export CUSTOM_METRICS=my-custom-metrics.toml`)
 
 This file must contain the following elements:
-- One or several metric section (``[[metric]]``)
+
+- One or several metric section (`[[metric]]`)
 - For each section a context, a request and a map between a field of your request and a comment.
 
 Here's a simple example:
@@ -314,10 +314,11 @@ This example allows to achieve this:
 
 ### Files & Folder:
 
-* tns_admin folder: `/path/to/tns_admin`
-* tnsnames.ora file: `/path/to/tns_admin/tnsnames.ora`
+- tns_admin folder: `/path/to/tns_admin`
+- tnsnames.ora file: `/path/to/tns_admin/tnsnames.ora`
 
 Example of a tnsnames.ora file:
+
 ```
 database =
 (DESCRIPTION =
@@ -333,9 +334,9 @@ database =
 
 ### Environment Variables
 
-* `TNS_ENTRY`: Name of the entry to use (`database` in the example file above)
-* `TNS_ADMIN`: Path you choose for the tns admin folder (`/path/to/tns_admin` in the example file above)
-* `DATA_SOURCE_NAME`: Datasource pointing to the `TNS_ENTRY` (`user/password@database` in the example file above)
+- `TNS_ENTRY`: Name of the entry to use (`database` in the example file above)
+- `TNS_ADMIN`: Path you choose for the tns admin folder (`/path/to/tns_admin` in the example file above)
+- `DATA_SOURCE_NAME`: Datasource pointing to the `TNS_ENTRY` (`user/password@database` in the example file above)
 
 # TLS connection to database
 
@@ -390,7 +391,7 @@ Or Alpine:
 
 ## Linux binaries
 
-Retrieve Oracle RPMs (version 18.5):
+Retrieve Oracle RPMs (version x.y):
 
     make download-rpms
 
@@ -400,7 +401,7 @@ Then run build:
 
 ## Windows binaries
 
-*Stollen from https://github.com/iamseth/oracledb_exporter/issues/40*
+_Stollen from https://github.com/iamseth/oracledb_exporter/issues/40_
 
 First, download Oracle Instant Client 64-Bit version basic and sdk versions.
 
@@ -417,16 +418,16 @@ Run the MSYS2 MINGW64 terminal and set dependencies packages:
 
 - Update pacman:
 
-    pacman -Su
+  pacman -Su
 
 - Close terminal and open a new terminal
 - Update all other packages:
 
-    pacman -Su
+  pacman -Su
 
 - Install pkg-config and gcc:
 
-    pacman -S mingw64/mingw-w64-x86_64-pkg-config mingw64/mingw-w64-x86_64-gcc
+  pacman -S mingw64/mingw-w64-x86_64-pkg-config mingw64/mingw-w64-x86_64-gcc
 
 Go to the pkg-config dir **c:/msys64/mingw64/lib/pkgconfig/** and create **oci8.pc** with the following content:
 
@@ -486,8 +487,7 @@ version as they are embedded in the container.
 
 Here an example to run this exporter (to scrap metrics from system/oracle@//host:1521/service-or-sid) and bind the exporter port (9161) to the global machine:
 
-```docker run -it --rm -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@//host:1521/service-or-sid iamseth/oracledb_exporter:0.2.6a```
-
+`docker run -it --rm -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@//host:1521/service-or-sid iamseth/oracledb_exporter:0.2.6a`
 
 ## Error scraping for wait_time
 
@@ -519,7 +519,6 @@ The root cause is Oracle's reaction of quering ASM-related views without ASM use
 ```
 $ find $ORACLE_BASE/diag/rdbms -name '*.tr[cm]' -mtime +14 -delete
 ```
-
 
 ## TLS and basic authentication
 

@@ -6,14 +6,14 @@ ARG MAJOR_VERSION
 ENV MAJOR_VERSION=${MAJOR_VERSION}
 ENV LD_LIBRARY_PATH "/usr/lib/oracle/${MAJOR_VERSION}/client64/lib"
 
-RUN apt-get -qq update && apt-get install --no-install-recommends -qq libaio1 rpm
+RUN apt-get -qq update && apt-get install -y --no-install-recommends -qq libaio1 alien && rm -rf /var/lib/apt/lists/*
 COPY oracle*${ORACLE_VERSION}*.rpm /
-RUN rpm -Uh --nodeps /oracle-instantclient*.x86_64.rpm && rm /*.rpm
+RUN alien -i --scripts /oracle*.rpm && rm /*.rpm
 
 COPY oci8.pc.template /usr/share/pkgconfig/oci8.pc
 RUN sed -i "s/@ORACLE_VERSION@/$ORACLE_VERSION/g" /usr/share/pkgconfig/oci8.pc && \
-    sed -i "s/@MAJOR_VERSION@/$MAJOR_VERSION/g" /usr/share/pkgconfig/oci8.pc && \
-    find /usr -name oci.pc
+  sed -i "s/@MAJOR_VERSION@/$MAJOR_VERSION/g" /usr/share/pkgconfig/oci8.pc && \
+  find /usr -name oci.pc
 RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
 
 WORKDIR /go/src/oracledb_exporter
@@ -24,11 +24,10 @@ ARG VERSION
 ENV VERSION ${VERSION:-0.1.0}
 
 ENV PKG_CONFIG_PATH /go/src/oracledb_exporter
-ENV GOOS            linux
 
-RUN go build -v -ldflags "-X main.Version=${VERSION} -s -w"
+RUN GOOS=linux GOARCH=amd64 go build -v -ldflags "-X main.Version=${VERSION} -s -w"
 
-FROM ubuntu:22.04
+FROM ubuntu:22.10
 LABEL authors="Seth Miller,Yannig Perré"
 LABEL maintainer="Yannig Perré <yannig.perre@gmail.com>"
 
@@ -38,8 +37,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 COPY oracle-instantclient*${ORACLE_VERSION}*basic*.rpm /
 
 RUN apt-get -qq update && \
-  apt-get -qq install --no-install-recommends tzdata libaio1 rpm -y && rpm -Uvh --nodeps /oracle*${ORACLE_VERSION}*rpm && \
-    rm -f /oracle*rpm
+  apt-get -qq install -y --no-install-recommends tzdata libaio1 alien && \
+  alien -i --scripts /oracle*.rpm && \
+  rm -f /oracle*.rpm && rm -rf /var/lib/apt/lists/*
 
 RUN adduser --system --uid 1000 --group appuser \
   && usermod -a -G 0,appuser appuser
