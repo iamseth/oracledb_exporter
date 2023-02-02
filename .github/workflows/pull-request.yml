@@ -19,6 +19,7 @@ env:
   PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
   PULL_REQUEST_BRANCH: ${{ github.head_ref }}
   BRANCH: ${{ github.event.pull_request.head.ref }}
+  REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
   REGISTRY: ghcr.io
   IMAGE_NAME: "ghcr.io/${{ github.repository }}"
   RELEASE: false
@@ -37,6 +38,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
+          repository: ${{ env.REPOSITORY }}
           ref: ${{ env.BRANCH }}
 
       - name: Read config
@@ -70,6 +72,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
+          repository: ${{ env.REPOSITORY }}
           ref: ${{ env.BRANCH }}
 
       - name: Setup Golang
@@ -153,6 +156,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
+          repository: ${{ env.REPOSITORY }}
           ref: ${{ env.BRANCH }}
 
       - name: Set alpha version
@@ -197,6 +201,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
+          repository: ${{ env.REPOSITORY }}
           ref: ${{ env.BRANCH }}
 
       - name: Setup instantclient cache
