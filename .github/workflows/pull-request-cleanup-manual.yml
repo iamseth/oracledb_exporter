@@ -14,6 +14,10 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
 
+permissions:
+  contents: write
+  packages: write
+
 env:
   PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
   PULL_REQUEST_BRANCH: ${{ github.head_ref }}

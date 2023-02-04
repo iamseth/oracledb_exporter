@@ -16,6 +16,10 @@ env:
   PACKAGE_TYPE: container
   USERNAME: ${{ github.repository_owner }}
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   cleanup-ghcr:
     runs-on: ubuntu-latest

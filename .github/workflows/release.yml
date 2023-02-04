@@ -22,7 +22,7 @@ env:
 
 jobs:
   config:
-    if: github.triggering_actor != 'dependabot[bot]'
+    if: github.triggering_actor != 'dependabot[bot]' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
       go-version: ${{ fromJson(steps.config.outputs.config).go-version }}
@@ -206,22 +206,23 @@ jobs:
           make oci.pc download-rpms
 
       - name: Build image
+        id: docker-meta
         env:
           VERSION: "${{ needs.release.outputs.version }}"
-        run: make ${{ matrix.name }}-image
+        run: |
+          make ${{ matrix.name }}-image
+          TAG_SUFFIX=$(echo "-${{ matrix.name }}" | sed s/-ubuntu//)
+          echo "image-id=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "image-version=${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
 
       - name: Log in to registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u $ --password-stdin
 
       - name: Push image
-        id: docker-meta
         env:
           VERSION: "${{ needs.release.outputs.version }}"
         run: |
           make push-${{ matrix.name }}-image
-          TAG_SUFFIX=$(echo "-${{ matrix.name }}" | sed s/-ubuntu//)
-          echo "image-id=$IMAGE_NAME" >> $GITHUB_OUTPUT
-          echo "image-version=${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
 
       - name: Setup cosign
         if: ${{ needs.config.outputs.deploy-sign-docker-image == 'true' }}

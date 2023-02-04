@@ -36,6 +36,7 @@ jobs:
       deploy-sign-docker-image: ${{ fromJson(steps.config.outputs.config).deploy.sign-docker-image }}
       deploy-pre-release-matrix: ${{ steps.pre-release-matrix.outputs.matrix }}
       deploy-release-matrix: ${{ steps.release-matrix.outputs.matrix }}
+      is-forked: ${{ github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -149,6 +150,8 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs:
       - config
       - build
@@ -175,6 +178,7 @@ jobs:
         run: mv application.tar.gz ${{ github.event.repository.name }}.tar.gz
 
       - name: Create release
+        if: ${{ env.FORKED == 'false' }}
         uses: softprops/action-gh-release@v1
         id: create-release
         with:
@@ -190,6 +194,10 @@ jobs:
 
   deploy:
     name: deploy-[${{ matrix.name }}]
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 1
@@ -224,28 +232,33 @@ jobs:
           make oci.pc download-rpms
 
       - name: Build image
-        env:
-          VERSION: "${{ needs.release.outputs.version }}"
-        run: make ${{ matrix.name }}-image
-
-      - name: Log in to registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u $ --password-stdin
-
-      - name: Push image
         id: docker-meta
         env:
           VERSION: "${{ needs.release.outputs.version }}"
         run: |
-          make push-${{ matrix.name }}-image
+          make ${{ matrix.name }}-image
           TAG_SUFFIX=$(echo "-${{ matrix.name }}" | sed s/-ubuntu//)
           echo "image-id=$IMAGE_NAME" >> $GITHUB_OUTPUT
           echo "image-version=${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
 
+      - name: Log in to registry
+        if: ${{ env.FORKED == 'false' }}
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u $ --password-stdin
+
+      - name: Push image
+        if: ${{ env.FORKED == 'false' }}
+        env:
+          VERSION: "${{ needs.release.outputs.version }}"
+        run: |
+          make push-${{ matrix.name }}-image
+
       - name: Format current time
+        if: ${{ env.FORKED == 'false' }}
         id: time_now
         run: echo "time_now_formatted=$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_OUTPUT"
 
       - name: Find releases comment
+        if: ${{ env.FORKED == 'false' }}
         uses: peter-evans/find-comment@v2
         id: find_comment
         with:
@@ -255,7 +268,7 @@ jobs:
 
       - name: Create releases comment
         uses: peter-evans/create-or-update-comment@v2
-        if: ${{ steps.find_comment.outputs.comment-id == '' }}
+        if: ${{ steps.find_comment.outputs.comment-id == '' && env.FORKED == 'false' }}
         with:
           comment-id: ${{ steps.find_comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
@@ -269,7 +282,7 @@ jobs:
 
       - name: Append releases comment
         uses: peter-evans/create-or-update-comment@v2
-        if: ${{ steps.find_comment.outputs.comment-id != '' }}
+        if: ${{ steps.find_comment.outputs.comment-id != '' && env.FORKED == 'false' }}
         with:
           comment-id: ${{ steps.find_comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
@@ -278,16 +291,16 @@ jobs:
             | ${{ steps.time_now.outputs.time_now_formatted }} | **${{ steps.docker-meta.outputs.image-version }}** |
 
       - name: Setup cosign
-        if: ${{ needs.config.outputs.deploy-sign-docker-image == 'true' }}
+        if: ${{ needs.config.outputs.deploy-sign-docker-image == 'true' && env.FORKED == 'false' }}
         uses: sigstore/cosign-installer@main
 
       - name: Write signing key to disk (only needed for `cosign sign --key`)
-        if: ${{ needs.config.outputs.deploy-sign-docker-image == 'true' }}
+        if: ${{ needs.config.outputs.deploy-sign-docker-image == 'true' && env.FORKED == 'false' }}
         continue-on-error: true
         run: echo "${{ secrets.SIGNING_SECRET }}" > cosign.key
 
       - name: Sign the published Docker image
-        if: ${{ needs.config.outputs.deploy-sign-docker-image == 'true' }}
+        if: ${{ needs.config.outputs.deploy-sign-docker-image == 'true' && env.FORKED == 'false' }}
         continue-on-error: true
         env:
           COSIGN_PASSWORD: ""
@@ -314,7 +327,12 @@ jobs:
 
   comments:
     runs-on: ubuntu-latest
+    if: ${{ needs.config.outputs.is-forked == 'false' }}
+    permissions:
+      contents: write
+      pull-requests: write
     needs:
+      - config
       - release
     steps:
       - name: Format current time
