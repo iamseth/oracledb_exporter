@@ -42,8 +42,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.REPOSITORY }}
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.PULL_REQUEST_HEAD }}
 
       - name: Read config
         id: config
@@ -76,8 +75,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.REPOSITORY }}
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.PULL_REQUEST_HEAD }}
 
       - name: Setup Golang
         uses: actions/setup-go@v3
@@ -162,8 +160,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.REPOSITORY }}
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.PULL_REQUEST_HEAD }}
 
       - name: Set alpha version
         id: version
@@ -212,8 +209,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.REPOSITORY }}
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.PULL_REQUEST_HEAD }}
 
       - name: Setup instantclient cache
         uses: actions/cache@v3
