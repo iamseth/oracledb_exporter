@@ -179,6 +179,8 @@ Usage of oracledb_exporter:
         File that may contain various custom metrics in a TOML file.
   --default.metrics string
         Default TOML file metrics.
+  --web.systemd-socket
+        Use systemd socket activation listeners instead of port listeners (Linux only).
   --web.listen-address string
        	Address to listen on for web interface and telemetry. (default ":9161")
   --web.telemetry-path string
@@ -187,8 +189,8 @@ Usage of oracledb_exporter:
         Number of maximum idle connections in the connection pool. (default "0")
   --database.maxOpenConns string
         Number of maximum open connections in the connection pool. (default "10")
-  --web.config
-        Specify which web configuration file to load
+  --web.config.file
+        Path to configuration file that can enable TLS or authentication.
 ```
 
 # Default metrics
@@ -497,7 +499,7 @@ If you experience an error `Error scraping for wait_time: sql: Scan error on col
 
 export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1
 export DATA_SOURCE_NAME=system/oracle@myhost
-/path/to/binary --log.level error --web.listen-address 9161
+/path/to/binary --log.level error --web.listen-address :9161
 ```
 
 If using Docker, set the same variable using the -e flag.
