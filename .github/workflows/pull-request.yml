@@ -20,6 +20,7 @@ env:
   PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
   PULL_REQUEST_BRANCH: ${{ github.head_ref }}
   PULL_REQUEST_HEAD: ${{ github.event.pull_request.head.sha }}
+  CONCURRENCY_GROUP: ${{ github.event.pull_request.head.repo.full_name }}-${{ github.head_ref }}/${{ github.ref }}
   BRANCH: ${{ github.event.pull_request.head.ref }}
   REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
   REGISTRY: ghcr.io
