@@ -3,7 +3,7 @@ OS_TYPE        ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH_TYPE      ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(ARCH)))
 GOOS           ?= $(shell go env GOOS)
 GOARCH         ?= $(shell go env GOARCH)
-VERSION        ?= 0.4.2
+VERSION        ?= 0.5.0
 MAJOR_VERSION  ?= 21
 MINOR_VERSION  ?= 8
 ORACLE_VERSION ?= $(MAJOR_VERSION).$(MINOR_VERSION)
@@ -102,6 +102,7 @@ push-oraclelinux-image:
 	docker push $(IMAGE_ID)-oraclelinux
 ifeq ("$(RELEASE)", "true")
 	docker push "$(IMAGE_NAME):oraclelinux"
+	docker push "$(IMAGE_ID)-oraclelinux_legacy-tablespace"
 endif
 
 sign-oraclelinux-image:
@@ -123,7 +124,8 @@ ubuntu-image: $(ORA_RPM)
 push-ubuntu-image:
 	docker push $(IMAGE_ID)
 ifeq ("$(RELEASE)", "true")
-	docker push $(IMAGE_ID_LATEST)
+	docker push "$(IMAGE_ID_LATEST)"
+	docker push "$(IMAGE_ID)_legacy-tablespace"
 endif
 
 sign-ubuntu-image:
