@@ -102,6 +102,7 @@ push-oraclelinux-image:
 	docker push $(IMAGE_ID)-oraclelinux
 ifeq ("$(RELEASE)", "true")
 	docker push "$(IMAGE_NAME):oraclelinux"
+	docker push "$(IMAGE_ID)-oraclelinux_legacy-tablespace"
 endif
 
 sign-oraclelinux-image:
@@ -123,7 +124,8 @@ ubuntu-image: $(ORA_RPM)
 push-ubuntu-image:
 	docker push $(IMAGE_ID)
 ifeq ("$(RELEASE)", "true")
-	docker push $(IMAGE_ID_LATEST)
+	docker push "$(IMAGE_ID_LATEST)"
+	docker push "$(IMAGE_ID)_legacy-tablespace"
 endif
 
 sign-ubuntu-image:
