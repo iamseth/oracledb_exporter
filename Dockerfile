@@ -28,8 +28,8 @@ ENV PKG_CONFIG_PATH /go/src/oracledb_exporter
 RUN GOOS=linux GOARCH=amd64 go build -v -ldflags "-X main.Version=${VERSION} -s -w"
 
 FROM ubuntu:22.10
-LABEL authors="Seth Miller,Yannig Perré"
-LABEL maintainer="Yannig Perré <yannig.perre@gmail.com>"
+LABEL org.opencontainers.image.authors="Seth Miller,Yannig Perré <yannig.perre@gmail.com>"
+LABEL org.opencontainers.image.description="Oracle DB Exporter"
 
 ENV VERSION ${VERSION:-0.1.0}
 ENV DEBIAN_FRONTEND=noninteractive

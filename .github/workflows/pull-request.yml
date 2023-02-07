@@ -3,7 +3,6 @@ run-name: "${{ github.event.pull_request.title }} / [${{ github.actor }}] is tes
 
 on:
   pull_request:
-    # pull_request_target:
     branches:
       - main
       - master
@@ -12,6 +11,12 @@ on:
       - "**/*.md"
       - "README.md"
 
+permissions:
+  contents: write
+  packages: write
+  security-events: write
+  pull-requests: write
+
 concurrency:
   group: ${{ github.event.pull_request.head.repo.full_name }}-${{ github.head_ref }}/${{ github.ref }}
   cancel-in-progress: true
@@ -19,6 +24,8 @@ concurrency:
 env:
   PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
   PULL_REQUEST_BRANCH: ${{ github.head_ref }}
+  PULL_REQUEST_HEAD: ${{ github.event.pull_request.head.sha }}
+  CONCURRENCY_GROUP: ${{ github.event.pull_request.head.repo.full_name }}-${{ github.head_ref }}/${{ github.ref }}
   BRANCH: ${{ github.event.pull_request.head.ref }}
   REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
   REGISTRY: ghcr.io
@@ -41,8 +48,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.REPOSITORY }}
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.PULL_REQUEST_HEAD }}
 
       - name: Read config
         id: config
@@ -75,8 +81,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.REPOSITORY }}
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.PULL_REQUEST_HEAD }}
 
       - name: Setup Golang
         uses: actions/setup-go@v3
@@ -150,8 +155,6 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     needs:
       - config
       - build
@@ -161,8 +164,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.REPOSITORY }}
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.PULL_REQUEST_HEAD }}
 
       - name: Set alpha version
         id: version
@@ -194,10 +196,6 @@ jobs:
 
   deploy:
     name: deploy-[${{ matrix.name }}]
-    permissions:
-      contents: write
-      packages: write
-      pull-requests: write
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 1
@@ -211,8 +209,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.REPOSITORY }}
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.PULL_REQUEST_HEAD }}
 
       - name: Setup instantclient cache
         uses: actions/cache@v3
@@ -328,9 +325,6 @@ jobs:
   comments:
     runs-on: ubuntu-latest
     if: ${{ needs.config.outputs.is-forked == 'false' }}
-    permissions:
-      contents: write
-      pull-requests: write
     needs:
       - config
       - release
