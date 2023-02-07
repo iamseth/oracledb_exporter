@@ -28,6 +28,7 @@ import (
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/exporter-toolkit/web"
+	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
 	"gopkg.in/alecthomas/kingpin.v2"
 	//Required for debugging
 	//_ "net/http/pprof"
@@ -36,14 +37,12 @@ import (
 var (
 	// Version will be set at build time.
 	Version            = "0.0.0.dev"
-	listenAddress      = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry. (env: LISTEN_ADDRESS)").Default(getEnv("LISTEN_ADDRESS", ":9161")).String()
 	metricPath         = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics. (env: TELEMETRY_PATH)").Default(getEnv("TELEMETRY_PATH", "/metrics")).String()
 	defaultFileMetrics = kingpin.Flag("default.metrics", "File with default metrics in a TOML file. (env: DEFAULT_METRICS)").Default(getEnv("DEFAULT_METRICS", "default-metrics.toml")).String()
 	customMetrics      = kingpin.Flag("custom.metrics", "File that may contain various custom metrics in a TOML file. (env: CUSTOM_METRICS)").Default(getEnv("CUSTOM_METRICS", "")).String()
 	queryTimeout       = kingpin.Flag("query.timeout", "Query timeout (in seconds). (env: QUERY_TIMEOUT)").Default(getEnv("QUERY_TIMEOUT", "5")).String()
 	maxIdleConns       = kingpin.Flag("database.maxIdleConns", "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)").Default(getEnv("DATABASE_MAXIDLECONNS", "0")).Int()
 	maxOpenConns       = kingpin.Flag("database.maxOpenConns", "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)").Default(getEnv("DATABASE_MAXOPENCONNS", "10")).Int()
-	tlsconfigFile      = kingpin.Flag("web.config", "Path to config yaml file that can enable TLS or authentication.").Default("").String()
 	scrapeInterval     = kingpin.Flag("scrape.interval", "Interval between each scrape. Default is to scrape on collect requests").Default("0s").Duration()
 )
 
@@ -100,7 +99,7 @@ func getEnv(key, fallback string) string {
 func atoi(stringValue string, logger log.Logger) int {
 	intValue, err := strconv.Atoi(stringValue)
 	if err != nil {
-		level.Error(logger).Log("error while converting to int:", err)
+		level.Error(logger).Log("msg", "error while converting to int", "err", err)
 		panic(err)
 	}
 	return intValue
@@ -116,17 +115,17 @@ func maskDsn(dsn string) string {
 }
 
 func connect(dsn string, logger log.Logger) *sql.DB {
-	level.Debug(logger).Log("Launching connection: ", maskDsn(dsn))
+	level.Debug(logger).Log("msg", "Launching connection", "dsn", maskDsn(dsn))
 	db, err := sql.Open("oci8", dsn)
 	if err != nil {
-		level.Error(logger).Log("Error while connecting to", dsn)
+		level.Error(logger).Log("msg", "Error while connecting to", "dsn", dsn)
 		panic(err)
 	}
-	level.Debug(logger).Log("set max idle connections to ", *maxIdleConns)
+	level.Debug(logger).Log("msg", "set max idle connections to", "value", *maxIdleConns)
 	db.SetMaxIdleConns(*maxIdleConns)
-	level.Debug(logger).Log("set max open connections to ", *maxOpenConns)
+	level.Debug(logger).Log("msg", "set max open connections to", "value", *maxOpenConns)
 	db.SetMaxOpenConns(*maxOpenConns)
-	level.Debug(logger).Log("Successfully connected to: ", maskDsn(dsn))
+	level.Debug(logger).Log("msg", "Successfully connected to", "dsn", maskDsn(dsn))
 	return db
 }
 
@@ -151,7 +150,7 @@ func NewExporter(dsn string, logger log.Logger) *Exporter {
 			Namespace: namespace,
 			Subsystem: exporter,
 			Name:      "scrape_errors_total",
-			Help:      "Total number of times an error occured scraping a Oracle database.",
+			Help:      "Total number of times an error occurred scraping a Oracle database.",
 		}, []string{"collector"}),
 		error: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
@@ -255,17 +254,17 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 	if err = e.db.Ping(); err != nil {
 		if strings.Contains(err.Error(), "sql: database is closed") {
-			level.Info(e.logger).Log("Reconnecting to DB")
+			level.Info(e.logger).Log("msg", "Reconnecting to DB")
 			e.db = connect(e.dsn, e.logger)
 		}
 	}
 	if err = e.db.Ping(); err != nil {
-		level.Error(e.logger).Log("Error pinging oracle:", err)
+		level.Error(e.logger).Log("msg", "Error pinging oracle", "err", err)
 		//e.db.Close()
 		e.up.Set(0)
 		return
 	} else {
-		level.Debug(e.logger).Log("Successfully pinged Oracle database: ", maskDsn(e.dsn))
+		level.Debug(e.logger).Log("msg", "Successfully pinged Oracle database", "dsn", maskDsn(e.dsn))
 		e.up.Set(1)
 	}
 
@@ -282,23 +281,23 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		go func() {
 			defer wg.Done()
 
-			level.Debug(e.logger).Log("About to scrape metric: ")
-			level.Debug(e.logger).Log("- Metric MetricsDesc: ", metric.MetricsDesc)
-			level.Debug(e.logger).Log("- Metric Context: ", metric.Context)
-			level.Debug(e.logger).Log("- Metric MetricsType: ", metric.MetricsType)
-			level.Debug(e.logger).Log("- Metric MetricsBuckets: ", metric.MetricsBuckets, "(Ignored unless Histogram type)")
-			level.Debug(e.logger).Log("- Metric Labels: ", metric.Labels)
-			level.Debug(e.logger).Log("- Metric FieldToAppend: ", metric.FieldToAppend)
-			level.Debug(e.logger).Log("- Metric IgnoreZeroResult: ", metric.IgnoreZeroResult)
-			level.Debug(e.logger).Log("- Metric Request: ", metric.Request)
+			level.Debug(e.logger).Log("msg", "About to scrape metric")
+			level.Debug(e.logger).Log("metricsDesc", metric.MetricsDesc)
+			level.Debug(e.logger).Log("context", metric.Context)
+			level.Debug(e.logger).Log("metricsType", metric.MetricsType)
+			level.Debug(e.logger).Log("metricsBuckets", metric.MetricsBuckets) // , "(Ignored unless Histogram type)"
+			level.Debug(e.logger).Log("labels", metric.Labels)
+			level.Debug(e.logger).Log("fieldToAppend", metric.FieldToAppend)
+			level.Debug(e.logger).Log("ignoreZeroResult", metric.IgnoreZeroResult)
+			level.Debug(e.logger).Log("request", metric.Request)
 
 			if len(metric.Request) == 0 {
-				level.Error(e.logger).Log("Error scraping for ", metric.MetricsDesc, ". Did you forget to define request in your toml file?")
+				level.Error(e.logger).Log("msg", "Error scraping. Did you forget to define request in your toml file?", "metricsDesc", metric.MetricsDesc)
 				return
 			}
 
 			if len(metric.MetricsDesc) == 0 {
-				level.Error(e.logger).Log("Error scraping for query", metric.Request, ". Did you forget to define metricsdesc  in your toml file?")
+				level.Error(e.logger).Log("msg", "Error scraping for query. Did you forget to define metricsdesc in your toml file?", "request", metric.Request)
 				return
 			}
 
@@ -306,7 +305,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 				if metricType == "histogram" {
 					_, ok := metric.MetricsBuckets[column]
 					if !ok {
-						level.Error(e.logger).Log("Unable to find MetricsBuckets configuration key for metric. (metric=" + column + ")")
+						level.Error(e.logger).Log("msg", "Unable to find MetricsBuckets configuration key for metric", "metric", column)
 						return
 					}
 				}
@@ -314,10 +313,10 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 			scrapeStart := time.Now()
 			if err = ScrapeMetric(e.db, ch, metric, e.logger); err != nil {
-				level.Error(e.logger).Log("Error scraping for", metric.Context, "_", metric.MetricsDesc, time.Since(scrapeStart), ":", err)
+				level.Error(e.logger).Log("msg", "Error scraping for", "context", metric.Context, "metricsDesc", metric.MetricsDesc, "since", time.Since(scrapeStart), "err", err)
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
-				level.Debug(e.logger).Log("Successfully scraped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
+				level.Debug(e.logger).Log("msg", "Successfully scraped metric", "context", metric.Context, "metricsDesc", metric.MetricsDesc, "since", time.Since(scrapeStart))
 			}
 		}()
 	}
@@ -344,7 +343,7 @@ func GetMetricType(metricType string, metricsType map[string]string) prometheus.
 
 // interface method to call ScrapeGenericValues using Metric struct values
 func ScrapeMetric(db *sql.DB, ch chan<- prometheus.Metric, metricDefinition Metric, logger log.Logger) error {
-	level.Debug(logger).Log("Calling function ScrapeGenericValues()")
+	level.Debug(logger).Log("msg", "Calling function ScrapeGenericValues()")
 	return ScrapeGenericValues(db, ch, metricDefinition.Context, metricDefinition.Labels,
 		metricDefinition.MetricsDesc, metricDefinition.MetricsType, metricDefinition.MetricsBuckets,
 		metricDefinition.FieldToAppend, metricDefinition.IgnoreZeroResult,
@@ -366,11 +365,11 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 			value, err := strconv.ParseFloat(strings.TrimSpace(row[metric]), 64)
 			// If not a float, skip current metric
 			if err != nil {
-				level.Error(logger).Log("Unable to convert current value to float (metric=" + metric +
-					",metricHelp=" + metricHelp + ",value=<" + row[metric] + ">)")
+				level.Error(logger).Log("msg", "Unable to convert current value to float", "metric", metric,
+					"metricHelp", metricHelp, "value", row[metric])
 				continue
 			}
-			level.Debug(logger).Log("Query result looks like: ", value)
+			level.Debug(logger).Log("msg", "Query result looks like", "value", value)
 			// If metric do not use a field content in metric's name
 			if strings.Compare(fieldToAppend, "") == 0 {
 				desc := prometheus.NewDesc(
@@ -381,22 +380,22 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 				if metricsType[strings.ToLower(metric)] == "histogram" {
 					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
 					if err != nil {
-						level.Error(logger).Log("Unable to convert count value to int (metric=" + metric +
-							",metricHelp=" + metricHelp + ",value=<" + row["count"] + ">)")
+						level.Error(logger).Log("msg", "Unable to convert count value to int",  "metric", metric,
+							"metricHelp", metricHelp, "value", row["count"])
 						continue
 					}
 					buckets := make(map[float64]uint64)
 					for field, le := range metricsBuckets[metric] {
 						lelimit, err := strconv.ParseFloat(strings.TrimSpace(le), 64)
 						if err != nil {
-							level.Error(logger).Log("Unable to convert bucket limit value to float (metric=" + metric +
-								",metricHelp=" + metricHelp + ",bucketlimit=<" + le + ">)")
+							level.Error(logger).Log("msg", "Unable to convert bucket limit value to float", "metric", metric,
+								"metricHelp", metricHelp, ",bucketlimit", le)
 							continue
 						}
 						counter, err := strconv.ParseUint(strings.TrimSpace(row[field]), 10, 64)
 						if err != nil {
-							level.Error(logger).Log("Unable to convert ", field, " value to int (metric="+metric+
-								",metricHelp="+metricHelp+",value=<"+row[field]+">)")
+							level.Error(logger).Log("msg", "Unable to convert value to int", "field", field, "metric", metric,
+								"metricHelp", metricHelp, "value", row[field])
 							continue
 						}
 						buckets[lelimit] = counter
@@ -415,22 +414,22 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 				if metricsType[strings.ToLower(metric)] == "histogram" {
 					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
 					if err != nil {
-						level.Error(logger).Log("Unable to convert count value to int (metric=" + metric +
-							",metricHelp=" + metricHelp + ",value=<" + row["count"] + ">)")
+						level.Error(logger).Log("msg", "Unable to convert count value to int", "metric", metric,
+							"metricHelp", metricHelp, "value", row["count"])
 						continue
 					}
 					buckets := make(map[float64]uint64)
 					for field, le := range metricsBuckets[metric] {
 						lelimit, err := strconv.ParseFloat(strings.TrimSpace(le), 64)
 						if err != nil {
-							level.Error(logger).Log("Unable to convert bucket limit value to float (metric=" + metric +
-								",metricHelp=" + metricHelp + ",bucketlimit=<" + le + ">)")
+							level.Error(logger).Log("msg", "Unable to convert bucket limit value to float", "metric", metric,
+								"metricHelp", metricHelp, ",bucketlimit", le)
 							continue
 						}
 						counter, err := strconv.ParseUint(strings.TrimSpace(row[field]), 10, 64)
 						if err != nil {
-							level.Error(logger).Log("Unable to convert ", field, " value to int (metric="+metric+
-								",metricHelp="+metricHelp+",value=<"+row[field]+">)")
+							level.Error(logger).Log("msg", "Unable to convert value to int", "field", field, "metric", metric,
+								"metricHelp", metricHelp, "value", row[field])
 							continue
 						}
 						buckets[lelimit] = counter
@@ -444,9 +443,9 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 		}
 		return nil
 	}
-	level.Debug(logger).Log("Calling function GeneratePrometheusMetrics()")
+	level.Debug(logger).Log("msg", "Calling function GeneratePrometheusMetrics()")
 	err := GeneratePrometheusMetrics(db, genericParser, request, logger)
-	level.Debug(logger).Log("ScrapeGenericValues() - metricsCount: ", metricsCount)
+	level.Debug(logger).Log("msg", "ScrapeGenericValues()", "metricsCount", metricsCount)
 	if err != nil {
 		return err
 	}
@@ -463,7 +462,7 @@ func GeneratePrometheusMetrics(db *sql.DB, parse func(row map[string]string) err
 	// Add a timeout
 	timeout, err := strconv.Atoi(*queryTimeout)
 	if err != nil {
-		level.Error(logger).Log("error while converting timeout option value: ", err)
+		level.Error(logger).Log("msg", "error while converting timeout option", "err", err)
 		panic(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
@@ -539,15 +538,15 @@ func checkIfMetricsChanged(logger log.Logger) bool {
 		if len(_customMetrics) == 0 {
 			continue
 		}
-		level.Debug(logger).Log("Checking modifications in following metrics definition file:", _customMetrics)
+		level.Debug(logger).Log("msg", "Checking modifications in following metrics definition", "file", _customMetrics)
 		h := sha256.New()
 		if err := hashFile(h, _customMetrics); err != nil {
-			level.Error(logger).Log("Unable to get file hash", err)
+			level.Error(logger).Log("msg", "Unable to get file hash", "err", err)
 			return false
 		}
 		// If any of files has been changed reload metrics
 		if !bytes.Equal(hashMap[i], h.Sum(nil)) {
-			level.Info(logger).Log(_customMetrics, "has been changed. Reloading metrics...")
+			level.Info(logger).Log("msg", "Metrics file has been changed. Reloading...", "file", _customMetrics)
 			hashMap[i] = h.Sum(nil)
 			return true
 		}
@@ -561,25 +560,25 @@ func reloadMetrics(logger log.Logger) {
 
 	// Load default metrics
 	if _, err := toml.DecodeFile(*defaultFileMetrics, &metricsToScrap); err != nil {
-		level.Error(logger).Log(err)
+		level.Error(logger).Log("msg", err)
 		panic(errors.New("Error while loading " + *defaultFileMetrics))
 	} else {
-		level.Info(logger).Log("Successfully loaded default metrics from: " + *defaultFileMetrics)
+		level.Info(logger).Log("msg", "Successfully loaded default metrics", "file", *defaultFileMetrics)
 	}
 
 	// If custom metrics, load it
 	if strings.Compare(*customMetrics, "") != 0 {
 		for _, _customMetrics := range strings.Split(*customMetrics, ",") {
 			if _, err := toml.DecodeFile(_customMetrics, &additionalMetrics); err != nil {
-				level.Error(logger).Log(err)
+				level.Error(logger).Log("msg", err)
 				panic(errors.New("Error while loading " + _customMetrics))
 			} else {
-				level.Info(logger).Log("Successfully loaded custom metrics from: " + _customMetrics)
+				level.Info(logger).Log("msg", "Successfully loaded custom metrics", "file", _customMetrics)
 			}
 			metricsToScrap.Metric = append(metricsToScrap.Metric, additionalMetrics.Metric...)
 		}
 	} else {
-		level.Info(logger).Log("No custom metrics defined.")
+		level.Info(logger).Log("msg", "No custom metrics defined")
 	}
 }
 
@@ -587,13 +586,14 @@ func main() {
 
 	promlogConfig := &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
+	var toolkitFlags = webflag.AddFlags(kingpin.CommandLine, ":9161")
 
 	kingpin.Version("oracledb_exporter " + Version)
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 	logger := promlog.New(promlogConfig)
 
-	level.Info(logger).Log("Starting oracledb_exporter " + Version)
+	level.Info(logger).Log("msg", "Starting oracledb_exporter", "version", Version)
 	dsn := os.Getenv("DATA_SOURCE_NAME")
 
 	// Load default and custom metrics
@@ -615,10 +615,9 @@ func main() {
 		w.Write([]byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>"))
 	})
 
-	level.Info(logger).Log("Listening on", *listenAddress)
-	server := &http.Server{Addr: *listenAddress}
-	if err := web.ListenAndServe(server, *tlsconfigFile, logger); err != nil {
-		level.Error(logger).Log("err", err)
+	server := &http.Server{}
+	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {
+		level.Error(logger).Log("msg", err)
 		os.Exit(1)
 	}
 }
