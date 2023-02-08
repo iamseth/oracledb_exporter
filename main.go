@@ -610,7 +610,7 @@ func main() {
 		ErrorHandling: promhttp.ContinueOnError,
 	}
 	http.Handle(*metricPath, promhttp.HandlerFor(prometheus.DefaultGatherer, opts))
-	http.HandleFunc("/scrape", scrapeHandle())
+	http.HandleFunc("/scrape", scrapeHandle(logger))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>"))
@@ -623,10 +623,10 @@ func main() {
 	}
 }
 
-func scrapeHandle() func(w http.ResponseWriter, r *http.Request) {
+func scrapeHandle(logger log.Logger) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		target := r.URL.Query().Get("target")
-		exporter := NewExporter(target)
+		exporter := NewExporter(target, logger)
 		registry := prometheus.NewRegistry()
 		registry.MustRegister(exporter)
 		gatherers := prometheus.Gatherers{
