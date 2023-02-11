@@ -49,11 +49,25 @@ The following metrics are exposed currently.
 
 ## Docker
 
-You can run via Docker using an existing image. If you don't already have an Oracle server, you can run one locally in a container and then link the exporter to it.
+You can run via Docker using an existing image. Since version 0.4, the images are available on the github registry.
+
+Here an example to retrieve the version 0.4.3:
+
+```bash
+docker pull ghcr.io/iamseth/oracledb_exporter:0.4.3
+```
+
+And here a command to run it and forward the port:
+
+```bash
+docker run -it --rm -p 9161:9161 ghcr.io/iamseth/oracledb_exporter:0.4.3
+```
+
+If you don't already have an Oracle server, you can run one locally in a container and then link the exporter to it.
 
 ```bash
 docker run -d --name oracle -p 1521:1521 wnameless/oracle-xe-11g-r2:18.04-apex
-docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@oracle/xe iamseth/oracledb_exporter
+docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@oracle/xe ghcr.io/iamseth/oracledb_exporter:0.4.3
 ```
 
 Since 0.2.1, the exporter image exist with Alpine flavor. Watch out for their use. It is for the moment a test.
