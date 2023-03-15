@@ -387,7 +387,7 @@ For more details, have a look at the following location: https://github.com/iams
 
 # Integration with Grafana
 
-An example Grafana dashboard is available [here](https://grafana.com/dashboards/3333).
+An example Grafana dashboard is available [here](https://grafana.com/grafana/dashboards/3333-oracledb/).
 
 # Build
 
