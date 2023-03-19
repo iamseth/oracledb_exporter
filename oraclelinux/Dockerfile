@@ -6,9 +6,10 @@ ARG MAJOR_VERSION
 ENV MAJOR_VERSION=${MAJOR_VERSION}
 ENV LD_LIBRARY_PATH "/usr/lib/oracle/${MAJOR_VERSION}/client64/lib"
 
-RUN apt-get -qq update && apt-get install -y --no-install-recommends -qq libaio1 rpm && rm -rf /var/lib/apt/lists/*
-COPY oracle*${ORACLE_VERSION}*.rpm /
-RUN rpm -Uh --nodeps /oracle-instantclient*.x86_64.rpm && rm /*.rpm
+ARG ORACLE_IMAGE
+COPY --from=${ORACLE_IMAGE} /usr/lib/oracle /usr/lib/oracle
+COPY --from=${ORACLE_IMAGE} /usr/share/oracle /usr/share/oracle
+COPY --from=${ORACLE_IMAGE} /usr/include/oracle /usr/include/oracle
 
 COPY oci8.pc.template /usr/share/pkgconfig/oci8.pc
 RUN sed -i "s/@ORACLE_VERSION@/$ORACLE_VERSION/g" /usr/share/pkgconfig/oci8.pc && \
@@ -34,10 +35,8 @@ ENV ORACLE_VERSION=${ORACLE_VERSION}
 ARG MAJOR_VERSION
 ENV MAJOR_VERSION=${MAJOR_VERSION}
 
-RUN microdnf -y install oracle-release-el8 && \
-  microdnf -y install oracle-instantclient-release-el8 && \
-  microdnf -y install oracle-instantclient-basic && \
-  microdnf clean all
+# We only need lib directory
+COPY --from=build /usr/lib/oracle /usr/lib/oracle
 
 ARG LEGACY_TABLESPACE
 ENV LEGACY_TABLESPACE=${LEGACY_TABLESPACE}

@@ -7,6 +7,7 @@ VERSION        ?= 0.4.4
 MAJOR_VERSION  ?= 21
 MINOR_VERSION  ?= 8
 ORACLE_VERSION ?= $(MAJOR_VERSION).$(MINOR_VERSION)
+ORACLE_IMAGE   ?= ghcr.io/oracle/oraclelinux8-instantclient:$(MAJOR_VERSION)
 PKG_VERSION    ?= $(ORACLE_VERSION).0.0.0-1.el8.$(ARCH)
 GLIBC_VERSION	 ?= 2.35-r0
 LDFLAGS        := -X main.Version=$(VERSION)
@@ -15,7 +16,7 @@ RPM_VERSION    ?= $(ORACLE_VERSION).0.0.0-1
 ORA_RPM         = oracle-instantclient-basic-$(PKG_VERSION).rpm oracle-instantclient-devel-$(PKG_VERSION).rpm
 LD_LIBRARY_PATH = /usr/lib/oracle/$(ORACLE_VERSION)/client64/lib
 BUILD_ARGS      = --build-arg VERSION=$(VERSION) --build-arg ORACLE_VERSION=$(ORACLE_VERSION) \
-                  --build-arg MAJOR_VERSION=$(MAJOR_VERSION)
+                  --build-arg MAJOR_VERSION=$(MAJOR_VERSION) --build-arg ORACLE_IMAGE=$(ORACLE_IMAGE)
 LEGACY_TABLESPACE = --build-arg LEGACY_TABLESPACE=.legacy-tablespace
 DIST_DIR        = oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(OS_TYPE)-$(ARCH_TYPE)
 ARCHIVE         = oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(OS_TYPE)-$(ARCH_TYPE).tar.gz
