@@ -1,4 +1,4 @@
-FROM golang:1.19 AS build
+FROM docker.io/library/golang:1.19 AS build
 
 ARG ORACLE_VERSION
 ENV ORACLE_VERSION=${ORACLE_VERSION}
@@ -28,7 +28,7 @@ ENV PKG_CONFIG_PATH /go/src/oracledb_exporter
 
 RUN GOOS=linux GOARCH=amd64 go build -v -ldflags "-X main.Version=${VERSION} -s -w"
 
-FROM oraclelinux:8-slim
+FROM docker.io/library/oraclelinux:8-slim
 
 ARG ORACLE_VERSION
 ENV ORACLE_VERSION=${ORACLE_VERSION}
@@ -37,6 +37,8 @@ ENV MAJOR_VERSION=${MAJOR_VERSION}
 
 # We only need lib directory
 COPY --from=build /usr/lib/oracle /usr/lib/oracle
+RUN microdnf -y install libaio && \
+  microdnf clean all
 
 ARG LEGACY_TABLESPACE
 ENV LEGACY_TABLESPACE=${LEGACY_TABLESPACE}
