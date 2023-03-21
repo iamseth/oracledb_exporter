@@ -6,6 +6,8 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"errors"
+	"github.com/prometheus/exporter-toolkit/web"
+	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
 	"hash"
 	"io"
 	"net/http"
@@ -25,11 +27,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
-	"github.com/prometheus/exporter-toolkit/web"
-	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
-	"gopkg.in/alecthomas/kingpin.v2"
 	//Required for debugging
 	//_ "net/http/pprof"
 )
@@ -44,6 +44,7 @@ var (
 	maxIdleConns       = kingpin.Flag("database.maxIdleConns", "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)").Default(getEnv("DATABASE_MAXIDLECONNS", "0")).Int()
 	maxOpenConns       = kingpin.Flag("database.maxOpenConns", "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)").Default(getEnv("DATABASE_MAXOPENCONNS", "10")).Int()
 	scrapeInterval     = kingpin.Flag("scrape.interval", "Interval between each scrape. Default is to scrape on collect requests").Default("0s").Duration()
+	toolkitFlags       = webflag.AddFlags(kingpin.CommandLine, ":9161")
 )
 
 // Metric name parts.
@@ -52,7 +53,7 @@ const (
 	exporter  = "exporter"
 )
 
-// Metrics object description
+// Metric object description
 type Metric struct {
 	Context          string
 	Labels           []string
@@ -64,7 +65,7 @@ type Metric struct {
 	IgnoreZeroResult bool
 }
 
-// Used to load multiple metrics from file
+// Metrics Used to load multiple metrics from file
 type Metrics struct {
 	Metric []Metric
 }
@@ -94,15 +95,6 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
-}
-
-func atoi(stringValue string, logger log.Logger) int {
-	intValue, err := strconv.Atoi(stringValue)
-	if err != nil {
-		level.Error(logger).Log("msg", "error while converting to int", "err", err)
-		panic(err)
-	}
-	return intValue
 }
 
 func maskDsn(dsn string) string {
@@ -341,7 +333,7 @@ func GetMetricType(metricType string, metricsType map[string]string) prometheus.
 	return valueType
 }
 
-// interface method to call ScrapeGenericValues using Metric struct values
+// ScrapeMetric interface method to call ScrapeGenericValues using Metric struct values
 func ScrapeMetric(db *sql.DB, ch chan<- prometheus.Metric, metricDefinition Metric, logger log.Logger) error {
 	level.Debug(logger).Log("msg", "Calling function ScrapeGenericValues()")
 	return ScrapeGenericValues(db, ch, metricDefinition.Context, metricDefinition.Labels,
@@ -350,13 +342,13 @@ func ScrapeMetric(db *sql.DB, ch chan<- prometheus.Metric, metricDefinition Metr
 		metricDefinition.Request, logger)
 }
 
-// generic method for retrieving metrics.
+// ScrapeGenericValues generic method for retrieving metrics.
 func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string, labels []string,
 	metricsDesc map[string]string, metricsType map[string]string, metricsBuckets map[string]map[string]string, fieldToAppend string, ignoreZeroResult bool, request string, logger log.Logger) error {
 	metricsCount := 0
 	genericParser := func(row map[string]string) error {
 		// Construct labels value
-		labelsValues := []string{}
+		var labelsValues []string
 		for _, label := range labels {
 			labelsValues = append(labelsValues, row[label])
 		}
@@ -380,7 +372,7 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 				if metricsType[strings.ToLower(metric)] == "histogram" {
 					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
 					if err != nil {
-						level.Error(logger).Log("msg", "Unable to convert count value to int",  "metric", metric,
+						level.Error(logger).Log("msg", "Unable to convert count value to int", "metric", metric,
 							"metricHelp", metricHelp, "value", row["count"])
 						continue
 					}
@@ -455,7 +447,7 @@ func ScrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string
 	return err
 }
 
-// inspired by https://kylewbanks.com/blog/query-result-to-map-in-golang
+// GeneratePrometheusMetrics inspired by https://kylewbanks.com/blog/query-result-to-map-in-golang
 // Parse SQL result and call parsing function to each row
 func GeneratePrometheusMetrics(db *sql.DB, parse func(row map[string]string) error, query string, logger log.Logger) error {
 
@@ -584,9 +576,8 @@ func reloadMetrics(logger log.Logger) {
 
 func main() {
 
-	promlogConfig := &promlog.Config{}
+	var promlogConfig = &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
-	var toolkitFlags = webflag.AddFlags(kingpin.CommandLine, ":9161")
 
 	kingpin.Version("oracledb_exporter " + Version)
 	kingpin.HelpFlag.Short('h')
