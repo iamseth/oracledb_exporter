@@ -1,3 +1,9 @@
+# Can't use a variable to refer to external image directly with COPY.
+# So using image in a step but doing nothing
+ARG ORACLE_IMAGE
+FROM ${ORACLE_IMAGE} as oracle-image
+
+# Build is starting here
 FROM docker.io/library/golang:1.19 AS build
 
 ARG ORACLE_VERSION
@@ -6,10 +12,10 @@ ARG MAJOR_VERSION
 ENV MAJOR_VERSION=${MAJOR_VERSION}
 ENV LD_LIBRARY_PATH "/usr/lib/oracle/${MAJOR_VERSION}/client64/lib"
 
-# Can't use a variable to refer to external image. So using image name
-COPY --from=ghcr.io/oracle/oraclelinux8-instantclient:21 /usr/lib/oracle /usr/lib/oracle
-COPY --from=ghcr.io/oracle/oraclelinux8-instantclient:21 /usr/share/oracle /usr/share/oracle
-COPY --from=ghcr.io/oracle/oraclelinux8-instantclient:21 /usr/include/oracle /usr/include/oracle
+# Retrieving binaries from oracle image
+COPY --from=oracle-image /usr/lib/oracle /usr/lib/oracle
+COPY --from=oracle-image /usr/share/oracle /usr/share/oracle
+COPY --from=oracle-image /usr/include/oracle /usr/include/oracle
 
 COPY oci8.pc.template /usr/share/pkgconfig/oci8.pc
 RUN sed -i "s/@ORACLE_VERSION@/$ORACLE_VERSION/g" /usr/share/pkgconfig/oci8.pc && \
