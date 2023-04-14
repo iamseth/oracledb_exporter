@@ -7,6 +7,7 @@ import (
 	"github.com/go-kit/log/level"
 )
 
+// needs the const if imported, cannot os.ReadFile in this case
 const defaultMetricsConst = `
 [[metric]]
 context = "sessions"

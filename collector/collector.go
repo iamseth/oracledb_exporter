@@ -23,8 +23,7 @@ import (
 
 // Exporter collects Oracle DB metrics. It implements prometheus.Collector.
 type Exporter struct {
-	config *Config
-
+	config          *Config
 	mu              *sync.Mutex
 	metricsToScrape Metrics
 	scrapeInterval  *time.Duration
@@ -40,23 +39,21 @@ type Exporter struct {
 
 // Config is the configuration of the exporter
 type Config struct {
-	DSN            string
-	MaxIdleConns   int
-	MaxOpenConns   int
-	CustomMetrics  string
-	QueryTimeout   int
-	ScrapeInterval time.Duration
+	DSN           string
+	MaxIdleConns  int
+	MaxOpenConns  int
+	CustomMetrics string
+	QueryTimeout  int
 }
 
 // CreateDefaultConfig returns the default configuration of the Exporter
 // it is to be of note that the DNS will be empty when
 func CreateDefaultConfig() *Config {
 	return &Config{
-		MaxIdleConns:   0,
-		MaxOpenConns:   10,
-		CustomMetrics:  "",
-		QueryTimeout:   5,
-		ScrapeInterval: 0,
+		MaxIdleConns:  0,
+		MaxOpenConns:  10,
+		CustomMetrics: "",
+		QueryTimeout:  5,
 	}
 }
 
@@ -165,21 +162,76 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implements prometheus.Collector.
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
+	// they are running scheduled scrapes we should only scrape new data
+	// on the interval
+	if e.scrapeInterval != nil && *e.scrapeInterval != 0 {
+		// read access must be checked
+		e.mu.Lock()
+		for _, r := range e.scrapeResults {
+			ch <- r
+		}
+		e.mu.Unlock()
+		return
+	}
+
+	// otherwise do a normal scrape per request
 	e.mu.Lock() // ensure no simultaneous scrapes
 	defer e.mu.Unlock()
-	if e.config.ScrapeInterval == 0 { // if we are to scrape when the request is made
-		e.scrape(ch)
-	} else {
-		scrapeResults := e.scrapeResults // There is a risk that e.scrapeResults will be replaced while we traverse this look. This should mitigate that risk
-		for idx := range scrapeResults {
-			ch <- scrapeResults[idx]
-		}
-	}
+	e.scrape(ch)
 	ch <- e.duration
 	ch <- e.totalScrapes
 	ch <- e.error
 	e.scrapeErrors.Collect(ch)
 	ch <- e.up
+}
+
+// RunScheduledScrapes is only relevant for users of this package that want to set the scrape on a timer
+// rather than letting it be per Collect call
+func (e *Exporter) RunScheduledScrapes(ctx context.Context, si time.Duration) {
+	e.scrapeInterval = &si
+	ticker := time.NewTicker(si)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			e.mu.Lock() // ensure no simultaneous scrapes
+			e.scheduledScrape()
+			e.mu.Unlock()
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (e *Exporter) scheduledScrape() {
+	metricCh := make(chan prometheus.Metric, 5)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		e.scrapeResults = []prometheus.Metric{}
+		for {
+			scrapeResult, more := <-metricCh
+			if more {
+				e.scrapeResults = append(e.scrapeResults, scrapeResult)
+				continue
+			}
+			return
+		}
+	}()
+	e.scrape(metricCh)
+
+	// report metadata metrics
+	metricCh <- e.duration
+	metricCh <- e.totalScrapes
+	metricCh <- e.error
+	e.scrapeErrors.Collect(metricCh)
+	metricCh <- e.up
+
+	close(metricCh)
+	wg.Wait()
 }
 
 func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
@@ -199,13 +251,13 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 			level.Info(e.logger).Log("Reconnecting to DB")
 			err = e.connect()
 			if err != nil {
-				level.Error(e.logger).Log("Error reconnectin to DB", err)
+				level.Error(e.logger).Log("Error reconnecting to DB", err)
 			}
 		}
 	}
+
 	if err = e.db.Ping(); err != nil {
 		level.Error(e.logger).Log("Error pinging oracle:", err)
-		// e.db.Close()
 		e.up.Set(0)
 		return
 	}
@@ -273,7 +325,7 @@ func (e *Exporter) connect() error {
 	db, err := sql.Open("oracle", e.dsn)
 	if err != nil {
 		level.Error(e.logger).Log("Error while connecting to", e.dsn)
-		panic(err)
+		return err
 	}
 	level.Debug(e.logger).Log("set max idle connections to ", e.config.MaxIdleConns)
 	db.SetMaxIdleConns(e.config.MaxIdleConns)
@@ -527,4 +579,12 @@ func cleanName(s string) string {
 	s = strings.Replace(s, "*", "", -1)  // Remove asterisks
 	s = strings.ToLower(s)
 	return s
+}
+
+func (e *Exporter) logError(s string) {
+	_ = level.Error(e.logger).Log(s)
+}
+
+func (e *Exporter) logDebug(s string) {
+	_ = level.Debug(e.logger).Log(s)
 }
