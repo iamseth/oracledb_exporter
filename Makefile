@@ -34,25 +34,7 @@ version:
 oracle-version:
 	@echo "$(ORACLE_VERSION)"
 
-%.rpm:
-	wget -q "https://download.oracle.com/otn_software/linux/instantclient/$(MAJOR_VERSION)$(MINOR_VERSION)000/$@"
-
-download-rpms: $(ORA_RPM)
-	@true
-
-prereq: download-rpms
-	@echo deps
-	sudo apt-get update
-	sudo apt-get install --no-install-recommends -qq libaio1 rpm alien
-	sudo alien -i oracle*.rpm || sudo rpm -Uvh --nodeps --force oracle*.rpm
-	echo $(LD_LIBRARY_PATH) | sudo tee /etc/ld.so.conf.d/oracle.conf
-	sudo ldconfig
-
-oci.pc:
-	sed "s/@ORACLE_VERSION@/$(ORACLE_VERSION)/g" oci8.pc.template | \
-	sed "s/@MAJOR_VERSION@/$(MAJOR_VERSION)/g" > oci8.pc
-
-go-build: oci.pc
+go-build:
 	@echo "Build $(OS_TYPE)"
 	mkdir -p ./dist/$(DIST_DIR)
 	PKG_CONFIG_PATH=${PWD} GOOS=$(OS_TYPE) GOARCH=$(ARCH_TYPE) go build $(GOFLAGS) -o ./dist/$(DIST_DIR)/oracledb_exporter

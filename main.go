@@ -6,8 +6,6 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"errors"
-	"github.com/prometheus/exporter-toolkit/web"
-	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
 	"hash"
 	"io"
 	"net/http"
@@ -17,10 +15,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/exporter-toolkit/web"
+	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
+
 	"github.com/BurntSushi/toml"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/log/level"
-	_ "github.com/mattn/go-oci8"
+	_ "github.com/sijms/go-ora/v2"
 
 	"fmt"
 
