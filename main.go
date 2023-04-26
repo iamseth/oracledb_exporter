@@ -109,7 +109,7 @@ func maskDsn(dsn string) string {
 
 func connect(dsn string, logger log.Logger) *sql.DB {
 	level.Debug(logger).Log("msg", "Launching connection", "dsn", maskDsn(dsn))
-	db, err := sql.Open("oci8", dsn)
+	db, err := sql.Open("oracle", dsn)
 	if err != nil {
 		level.Error(logger).Log("msg", "Error while connecting to", "dsn", dsn)
 		panic(err)

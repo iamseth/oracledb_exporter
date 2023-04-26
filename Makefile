@@ -59,7 +59,7 @@ go-test:
 	@PKG_CONFIG_PATH=${PWD} GOOS=$(OS_TYPE) GOARCH=$(ARCH_TYPE) go test -coverprofile="test-coverage.out" $$(go list ./... | grep -v /vendor/)
 
 clean:
-	rm -rf ./dist sgerrand.rsa.pub glibc-*.apk oracle-*.rpm oci8.pc
+	rm -rf ./dist sgerrand.rsa.pub glibc-*.apk oracle-*.rpm
 
 docker: ubuntu-image alpine-image oraclelinux-image
 
@@ -141,7 +141,7 @@ else
 	@echo "Can't find cosign.key file"
 endif
 
-travis: oci.pc prereq deps go-test go-build docker
+travis: prereq deps go-test go-build docker
 	@true
 
-.PHONY: version build deps go-test clean docker travis glibc.apk oci.pc
+.PHONY: version build deps go-test clean docker travis glibc.apk
