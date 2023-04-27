@@ -472,6 +472,48 @@ Everything must compile, including mattn driver for oracle.
 
 Next build ./... in oracledb-exporter dir, or install it.
 
+## Import into your Golang Application
+
+The `oracledb_exporter` can also be imported into your Go based applications. The [Grafana Agent](https://github.com/grafana/agent/) uses this pattern to implement the [OracleDB integration](https://grafana.com/docs/grafana-cloud/data-configuration/integrations/integration-reference/integration-oracledb/). Feel free to modify the code to fit your application's use case.
+
+Here is a small snippet of an example usage of the exporter in code:
+
+```go
+ promLogConfig := &promlog.Config{}
+ // create your own config
+ logger := promlog.New(promLogConfig)
+
+ // replace with your connection string
+ connectionString := "oracle://username:password@localhost:1521/orcl.localnet"
+ oeExporter, err := oe.NewExporter(logger, &oe.Config{
+  DSN:          connectionString,
+  MaxIdleConns: 0,
+  MaxOpenConns: 10,
+  QueryTimeout: 5,
+ })
+
+ if err != nil {
+  panic(err)
+ }
+
+ metricChan := make(chan prometheus.Metric, len(oeExporter.DefaultMetrics().Metric))
+ oeExporter.Collect(metricChan)
+
+ // alternatively its possible to run scrapes on an interval
+ // and Collect() calls will only return updated data once
+ // that intervaled scrape is run
+ // please note this is a blocking call so feel free to run
+ // in a separate goroutine
+ // oeExporter.RunScheduledScrapes(context.Background(), time.Minute)
+
+ for r := range metricChan {
+  // Write to the client of your choice
+  // or spin up a promhttp.Server to serve these metrics
+  r.Write(&dto.Metric{})
+ }
+
+```
+
 # FAQ/Troubleshooting
 
 ## Unable to convert current value to float (metric=par,metri...in.go:285
