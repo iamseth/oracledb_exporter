@@ -111,7 +111,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          make oci.pc prereq
+          make prereq
 
       - name: Setup Golang cache
         uses: actions/cache@v3
@@ -226,7 +226,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          make oci.pc download-rpms
+          make download-rpms
 
       - name: Build image
         id: docker-meta
