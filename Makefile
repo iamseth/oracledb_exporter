@@ -141,7 +141,7 @@ else
 	@echo "Can't find cosign.key file"
 endif
 
-travis: prereq deps go-test go-build docker
+travis: deps go-test go-build docker
 	@true
 
 .PHONY: version build deps go-test clean docker travis glibc.apk
