@@ -12,9 +12,6 @@ PKG_VERSION    ?= $(ORACLE_VERSION).0.0.0-1.el8.$(ARCH)
 GLIBC_VERSION	 ?= 2.35-r0
 LDFLAGS        := -X main.Version=$(VERSION)
 GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
-RPM_VERSION    ?= $(ORACLE_VERSION).0.0.0-1
-ORA_RPM         = oracle-instantclient-basic-$(PKG_VERSION).rpm oracle-instantclient-devel-$(PKG_VERSION).rpm
-LD_LIBRARY_PATH = /usr/lib/oracle/$(ORACLE_VERSION)/client64/lib
 BUILD_ARGS      = --build-arg VERSION=$(VERSION) --build-arg ORACLE_VERSION=$(ORACLE_VERSION) \
                   --build-arg MAJOR_VERSION=$(MAJOR_VERSION) --build-arg ORACLE_IMAGE=$(ORACLE_IMAGE)
 LEGACY_TABLESPACE = --build-arg LEGACY_TABLESPACE=.legacy-tablespace
@@ -95,7 +92,7 @@ else
 	@echo "Can't find cosign.key file"
 endif
 
-ubuntu-image: $(ORA_RPM)
+ubuntu-image:
 	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)\" already exists on ghcr.io"; \
 	else \
@@ -119,7 +116,7 @@ else
 	@echo "Can't find cosign.key file"
 endif
 
-alpine-image: $(ORA_RPM)
+alpine-image:
 	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)-alpine" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)-alpine\" already exists on ghcr.io"; \
 	else \
