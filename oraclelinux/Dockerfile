@@ -17,12 +17,6 @@ COPY --from=oracle-image /usr/lib/oracle /usr/lib/oracle
 COPY --from=oracle-image /usr/share/oracle /usr/share/oracle
 COPY --from=oracle-image /usr/include/oracle /usr/include/oracle
 
-COPY oci8.pc.template /usr/share/pkgconfig/oci8.pc
-RUN sed -i "s/@ORACLE_VERSION@/$ORACLE_VERSION/g" /usr/share/pkgconfig/oci8.pc && \
-  sed -i "s/@MAJOR_VERSION@/$MAJOR_VERSION/g" /usr/share/pkgconfig/oci8.pc && \
-  find /usr -name oci.pc
-RUN echo $LD_LIBRARY_PATH >> /etc/ld.so.conf.d/oracle.conf && ldconfig
-
 WORKDIR /go/src/oracledb_exporter
 COPY . .
 RUN go get -d -v
