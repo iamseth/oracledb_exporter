@@ -405,72 +405,15 @@ Or Alpine:
 
     make alpine-image
 
-## Linux binaries
+## Building Binaries
 
-Retrieve Oracle RPMs (version x.y):
+Run build:
 
-    make download-rpms
+```sh
+    make go-build
+```
 
-Then run build:
-
-    make linux
-
-## Windows binaries
-
-_Stollen from https://github.com/iamseth/oracledb_exporter/issues/40_
-
-First, download Oracle Instant Client 64-Bit version basic and sdk versions.
-
-Extract client (for example: **C:\oracle\instantclient_18_5**) and extract SDK to the same folder (**C:\oracle\instantclient_18_5\sdk**)
-
-Set the environment variables:
-
-    setx CGO_CFLAGS "C:\oracle\instantclient_18_5\sdk\include"
-    setx CGO_LDFLAGS "-LC:\oracle\instantclient_18_5 -loci"
-
-Then install GCC (like MSYS2 64 bit in **c:\msys64**)
-
-Run the MSYS2 MINGW64 terminal and set dependencies packages:
-
-- Update pacman:
-
-  pacman -Su
-
-- Close terminal and open a new terminal
-- Update all other packages:
-
-  pacman -Su
-
-- Install pkg-config and gcc:
-
-  pacman -S mingw64/mingw-w64-x86_64-pkg-config mingw64/mingw-w64-x86_64-gcc
-
-Go to the pkg-config dir **c:/msys64/mingw64/lib/pkgconfig/** and create **oci8.pc** with the following content:
-
-    prefix=C:\oracle\instantclient_18_5/sdk/
-    version=18.5
-    build=client64
-    libdir=C:\oracle\instantclient_18_5/sdk/lib/msvc
-    includedir=C:\oracle\instantclient_18_5/sdk/include
-    glib_genmarshal=glib-genmarshal
-    gobject_query=gobject-query
-    glib_mkenums=glib-mkenums
-    Name: oci8
-    Description: Oracle database engine
-    Version: ${version}
-    Libs: -L${libdir} -loci
-    Libs.private:
-    Cflags: -I${includedir}
-
-Set **%PKG_CONFIG_PATH%** as the environment variable:
-
-    setx PKG_CONFIG_PATH "C:\msys64\mingw64\lib\pkgconfig"
-
-Ensure, that **%PATH%** includes path to the msys64 binares, if not set it: setx path "%path%;C:\msys64\mingw64\bin"
-
-Everything must compile, including mattn driver for oracle.
-
-Next build ./... in oracledb-exporter dir, or install it.
+will output binaries and archive inside the `dist` folder for the building operating system.
 
 ## Import into your Golang Application
 

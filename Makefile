@@ -15,13 +15,18 @@ GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
 BUILD_ARGS      = --build-arg VERSION=$(VERSION) --build-arg ORACLE_VERSION=$(ORACLE_VERSION) \
                   --build-arg MAJOR_VERSION=$(MAJOR_VERSION) --build-arg ORACLE_IMAGE=$(ORACLE_IMAGE)
 LEGACY_TABLESPACE = --build-arg LEGACY_TABLESPACE=.legacy-tablespace
-DIST_DIR        = oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(OS_TYPE)-$(ARCH_TYPE)
-ARCHIVE         = oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(OS_TYPE)-$(ARCH_TYPE).tar.gz
+OUTDIR          = ./dist
 
 IMAGE_NAME     ?= iamseth/oracledb_exporter
 IMAGE_ID       ?= $(IMAGE_NAME):$(VERSION)
 IMAGE_ID_LATEST?= $(IMAGE_NAME):latest
 RELEASE        ?= true
+
+ifeq ($(GOOS), windows)
+EXT?=.exe
+else
+EXT?=
+endif
 
 export LD_LIBRARY_PATH ORACLE_VERSION
 
@@ -31,12 +36,37 @@ version:
 oracle-version:
 	@echo "$(ORACLE_VERSION)"
 
+.PHONY: go-build
 go-build:
 	@echo "Build $(OS_TYPE)"
-	mkdir -p ./dist/$(DIST_DIR)
-	PKG_CONFIG_PATH=${PWD} GOOS=$(OS_TYPE) GOARCH=$(ARCH_TYPE) go build $(GOFLAGS) -o ./dist/$(DIST_DIR)/oracledb_exporter
-	cp default-metrics.toml ./dist/$(DIST_DIR)
-	(cd dist ; tar cfz $(ARCHIVE) $(DIST_DIR))
+	mkdir -p $(OUTDIR)/oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(GOOS)-$(GOARCH)/
+	go build $(GOFLAGS) -o $(OUTDIR)/oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(GOOS)-$(GOARCH)/oracledb_exporter$(EXT)
+	cp default-metrics.toml $(OUTDIR)/$(DIST_DIR)
+	(cd dist ; tar cfz oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(GOOS)-$(GOARCH).tar.gz oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(GOOS)-$(GOARCH))
+
+.PHONY: go-build-linux-amd64
+go-build-linux-amd64:
+	GOOS=linux GOARCH=amd64 $(MAKE) go-build -j2
+
+.PHONY: go-build-linux-arm64
+go-build-linux-arm64:
+	GOOS=linux GOARCH=arm64 $(MAKE) go-build -j2
+
+.PHONY: go-build-darwin-amd64
+go-build-darwin-amd64:
+	GOOS=darwin GOARCH=amd64 $(MAKE) go-build -j2
+
+.PHONY: go-build-darwin-arm64
+go-build-darwin-arm64:
+	GOOS=darwin GOARCH=arm64 $(MAKE) go-build -j2
+
+.PHONY: go-build-windows-amd64
+go-build-windows-amd64:
+	GOOS=windows GOARCH=amd64 $(MAKE) go-build -j2
+
+.PHONY: go-build-windows-x86
+go-build-windows-x86:
+	GOOS=windows GOARCH=386 $(MAKE) go-build -j2
 
 go-lint:
 	@echo "Linting codebase"
@@ -49,11 +79,11 @@ build: docker
 	@true
 
 deps:
-	@PKG_CONFIG_PATH=${PWD} go get
+	go get
 
 go-test:
 	@echo "Run tests"
-	@PKG_CONFIG_PATH=${PWD} GOOS=$(OS_TYPE) GOARCH=$(ARCH_TYPE) go test -coverprofile="test-coverage.out" $$(go list ./... | grep -v /vendor/)
+	GOOS=$(OS_TYPE) GOARCH=$(ARCH_TYPE) go test -coverprofile="test-coverage.out" $$(go list ./... | grep -v /vendor/)
 
 clean:
 	rm -rf ./dist sgerrand.rsa.pub glibc-*.apk oracle-*.rpm
