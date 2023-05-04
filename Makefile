@@ -15,6 +15,10 @@ IMAGE_ID       ?= $(IMAGE_NAME):$(VERSION)
 IMAGE_ID_LATEST?= $(IMAGE_NAME):latest
 RELEASE        ?= true
 
+UBUNTU_BASE_IMAGE       ?= docker.io/library/ubuntu:23.04
+ORACLE_LINUX_BASE_IMAGE ?= docker.io/library/oraclelinux:8-slim
+ALPINE_BASE_IMAGE       ?= docker.io/library/alpine:3.17
+
 ifeq ($(GOOS), windows)
 EXT?=.exe
 else
@@ -89,8 +93,8 @@ oraclelinux-image:
 	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)-oraclelinux" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)-oraclelinux\" already exists on ghcr.io"; \
 	else \
-		docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-oraclelinux" --target oracle-linux . && \
-		docker build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)-oraclelinux_legacy-tablespace" --target oracle-linux . && \
+		docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-oraclelinux" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . && \
+		docker build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)-oraclelinux_legacy-tablespace" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . && \
 		docker tag "$(IMAGE_ID)-oraclelinux" "$(IMAGE_NAME):oraclelinux"; \
 	fi
 
@@ -112,8 +116,8 @@ ubuntu-image:
 	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)\" already exists on ghcr.io"; \
 	else \
-		docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)" . && \
-		docker build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)_legacy-tablespace" . && \
+		docker build --progress=plain $(BUILD_ARGS) --build-arg BASE_IMAGE=$(UBUNTU_BASE_IMAGE) -t "$(IMAGE_ID)" . && \
+		docker build --progress=plain $(BUILD_ARGS) --build-arg BASE_IMAGE=$(UBUNTU_BASE_IMAGE) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)_legacy-tablespace" . && \
 		docker tag "$(IMAGE_ID)" "$(IMAGE_ID_LATEST)"; \
 	fi
 
@@ -136,8 +140,8 @@ alpine-image:
 	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)-alpine" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)-alpine\" already exists on ghcr.io"; \
 	else \
-		docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-alpine" --target alpine . && \
-		docker build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) --target alpine -t "$(IMAGE_ID)-alpine_legacy-tablespace" . && \
+		docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-alpine" --build-arg BASE_IMAGE=$(ALPINE_BASE_IMAGE) . && \
+		docker build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) --build-arg BASE_IMAGE=$(ALPINE_BASE_IMAGE) -t "$(IMAGE_ID)-alpine_legacy-tablespace" . && \
 		docker tag "$(IMAGE_ID)-alpine" "$(IMAGE_NAME):alpine"; \
 	fi
 
