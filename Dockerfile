@@ -17,9 +17,6 @@ LABEL org.opencontainers.image.description="Oracle DB Exporter"
 ENV VERSION ${VERSION:-0.1.0}
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN adduser --system --uid 1000 --group appuser \
-  && usermod -a -G 0,appuser appuser
-
 ARG LEGACY_TABLESPACE
 ENV LEGACY_TABLESPACE=${LEGACY_TABLESPACE}
 COPY --chown=appuser:appuser --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
@@ -29,7 +26,7 @@ ENV DATA_SOURCE_NAME system/oracle@oracle/xe
 
 EXPOSE 9161
 
-USER appuser
+USER 1000
 
 ENTRYPOINT ["/oracledb_exporter"]
 
@@ -42,10 +39,7 @@ ENV LEGACY_TABLESPACE=${LEGACY_TABLESPACE}
 COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
 ADD ./default-metrics${LEGACY_TABLESPACE}.toml /default-metrics.toml
 
-RUN chmod 755 /oracledb_exporter && \
-  chmod 644 /default-metrics.toml && \
-  groupadd www-data && useradd -g www-data www-data
-USER www-data
+USER 1000
 
 EXPOSE 9161
 
@@ -56,6 +50,7 @@ LABEL org.opencontainers.image.authors="Seth Miller,Yannig Perré <yannig.perre@
 LABEL org.opencontainers.image.description="Oracle DB Exporter"
 
 COPY --from=build /go/src/oracledb_exporter/oracledb_exporter /oracledb_exporter
+USER 1000
 
 EXPOSE 9161
 
