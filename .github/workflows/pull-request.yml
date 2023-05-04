@@ -96,23 +96,6 @@ jobs:
           echo "oracle-version=$oracle_version" >> $GITHUB_OUTPUT
           echo "version=$version" >> $GITHUB_OUTPUT
 
-      - name: Setup instantclient cache
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-instantclient-rpm
-          cache-version: ${{ steps.version.outputs.oracle-version }}
-        with:
-          path: |
-            ./oracle-instantclient-*.rpm
-            ./oci8.pc
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.cache-version }}-${{ hashFiles('**/Makefile') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.cache-version }}-
-
-      - name: Install dependencies
-        run: |
-          make oci.pc prereq
-
       - name: Setup Golang cache
         uses: actions/cache@v3
         with:
@@ -210,23 +193,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ env.PULL_REQUEST_HEAD }}
-
-      - name: Setup instantclient cache
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-instantclient-rpm
-          cache-version: ${{ needs.build.outputs.oracle-version }}
-        with:
-          path: |
-            ./oracle-instantclient-*.rpm
-            ./oci8.pc
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.cache-version }}-${{ hashFiles('**/Makefile') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.cache-version }}-
-
-      - name: Install dependencies
-        run: |
-          make oci.pc download-rpms
 
       - name: Build image
         id: docker-meta

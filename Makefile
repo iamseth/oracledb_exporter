@@ -3,7 +3,7 @@ OS_TYPE        ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH_TYPE      ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(ARCH)))
 GOOS           ?= $(shell go env GOOS)
 GOARCH         ?= $(shell go env GOARCH)
-VERSION        ?= 0.4.4
+VERSION        ?= 0.5.0
 MAJOR_VERSION  ?= 21
 MINOR_VERSION  ?= 8
 ORACLE_VERSION ?= $(MAJOR_VERSION).$(MINOR_VERSION)
@@ -12,19 +12,21 @@ PKG_VERSION    ?= $(ORACLE_VERSION).0.0.0-1.el8.$(ARCH)
 GLIBC_VERSION	 ?= 2.35-r0
 LDFLAGS        := -X main.Version=$(VERSION)
 GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
-RPM_VERSION    ?= $(ORACLE_VERSION).0.0.0-1
-ORA_RPM         = oracle-instantclient-basic-$(PKG_VERSION).rpm oracle-instantclient-devel-$(PKG_VERSION).rpm
-LD_LIBRARY_PATH = /usr/lib/oracle/$(ORACLE_VERSION)/client64/lib
 BUILD_ARGS      = --build-arg VERSION=$(VERSION) --build-arg ORACLE_VERSION=$(ORACLE_VERSION) \
                   --build-arg MAJOR_VERSION=$(MAJOR_VERSION) --build-arg ORACLE_IMAGE=$(ORACLE_IMAGE)
 LEGACY_TABLESPACE = --build-arg LEGACY_TABLESPACE=.legacy-tablespace
-DIST_DIR        = oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(OS_TYPE)-$(ARCH_TYPE)
-ARCHIVE         = oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(OS_TYPE)-$(ARCH_TYPE).tar.gz
+OUTDIR          = ./dist
 
 IMAGE_NAME     ?= iamseth/oracledb_exporter
 IMAGE_ID       ?= $(IMAGE_NAME):$(VERSION)
 IMAGE_ID_LATEST?= $(IMAGE_NAME):latest
 RELEASE        ?= true
+
+ifeq ($(GOOS), windows)
+EXT?=.exe
+else
+EXT?=
+endif
 
 export LD_LIBRARY_PATH ORACLE_VERSION
 
@@ -34,30 +36,37 @@ version:
 oracle-version:
 	@echo "$(ORACLE_VERSION)"
 
-%.rpm:
-	wget -q "https://download.oracle.com/otn_software/linux/instantclient/$(MAJOR_VERSION)$(MINOR_VERSION)000/$@"
-
-download-rpms: $(ORA_RPM)
-	@true
-
-prereq: download-rpms
-	@echo deps
-	sudo apt-get update
-	sudo apt-get install --no-install-recommends -qq libaio1 rpm alien
-	sudo alien -i oracle*.rpm || sudo rpm -Uvh --nodeps --force oracle*.rpm
-	echo $(LD_LIBRARY_PATH) | sudo tee /etc/ld.so.conf.d/oracle.conf
-	sudo ldconfig
-
-oci.pc:
-	sed "s/@ORACLE_VERSION@/$(ORACLE_VERSION)/g" oci8.pc.template | \
-	sed "s/@MAJOR_VERSION@/$(MAJOR_VERSION)/g" > oci8.pc
-
-go-build: oci.pc
+.PHONY: go-build
+go-build:
 	@echo "Build $(OS_TYPE)"
-	mkdir -p ./dist/$(DIST_DIR)
-	PKG_CONFIG_PATH=${PWD} GOOS=$(OS_TYPE) GOARCH=$(ARCH_TYPE) go build $(GOFLAGS) -o ./dist/$(DIST_DIR)/oracledb_exporter
-	cp default-metrics.toml ./dist/$(DIST_DIR)
-	(cd dist ; tar cfz $(ARCHIVE) $(DIST_DIR))
+	mkdir -p $(OUTDIR)/oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(GOOS)-$(GOARCH)/
+	go build $(GOFLAGS) -o $(OUTDIR)/oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(GOOS)-$(GOARCH)/oracledb_exporter$(EXT)
+	cp default-metrics.toml $(OUTDIR)/$(DIST_DIR)
+	(cd dist ; tar cfz oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(GOOS)-$(GOARCH).tar.gz oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(GOOS)-$(GOARCH))
+
+.PHONY: go-build-linux-amd64
+go-build-linux-amd64:
+	GOOS=linux GOARCH=amd64 $(MAKE) go-build -j2
+
+.PHONY: go-build-linux-arm64
+go-build-linux-arm64:
+	GOOS=linux GOARCH=arm64 $(MAKE) go-build -j2
+
+.PHONY: go-build-darwin-amd64
+go-build-darwin-amd64:
+	GOOS=darwin GOARCH=amd64 $(MAKE) go-build -j2
+
+.PHONY: go-build-darwin-arm64
+go-build-darwin-arm64:
+	GOOS=darwin GOARCH=arm64 $(MAKE) go-build -j2
+
+.PHONY: go-build-windows-amd64
+go-build-windows-amd64:
+	GOOS=windows GOARCH=amd64 $(MAKE) go-build -j2
+
+.PHONY: go-build-windows-x86
+go-build-windows-x86:
+	GOOS=windows GOARCH=386 $(MAKE) go-build -j2
 
 go-lint:
 	@echo "Linting codebase"
@@ -70,14 +79,14 @@ build: docker
 	@true
 
 deps:
-	@PKG_CONFIG_PATH=${PWD} go get
+	go get
 
 go-test:
 	@echo "Run tests"
-	@PKG_CONFIG_PATH=${PWD} GOOS=$(OS_TYPE) GOARCH=$(ARCH_TYPE) go test -coverprofile="test-coverage.out" $$(go list ./... | grep -v /vendor/)
+	GOOS=$(OS_TYPE) GOARCH=$(ARCH_TYPE) go test -coverprofile="test-coverage.out" $$(go list ./... | grep -v /vendor/)
 
 clean:
-	rm -rf ./dist sgerrand.rsa.pub glibc-*.apk oracle-*.rpm oci8.pc
+	rm -rf ./dist sgerrand.rsa.pub glibc-*.apk oracle-*.rpm
 
 docker: ubuntu-image alpine-image oraclelinux-image
 
@@ -113,7 +122,7 @@ else
 	@echo "Can't find cosign.key file"
 endif
 
-ubuntu-image: $(ORA_RPM)
+ubuntu-image:
 	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)\" already exists on ghcr.io"; \
 	else \
@@ -137,7 +146,7 @@ else
 	@echo "Can't find cosign.key file"
 endif
 
-alpine-image: $(ORA_RPM)
+alpine-image:
 	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)-alpine" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)-alpine\" already exists on ghcr.io"; \
 	else \
@@ -159,7 +168,4 @@ else
 	@echo "Can't find cosign.key file"
 endif
 
-travis: oci.pc prereq deps go-test go-build docker
-	@true
-
-.PHONY: version build deps go-test clean docker travis glibc.apk oci.pc
+.PHONY: version build deps go-test clean docker glibc.apk

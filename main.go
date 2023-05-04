@@ -6,12 +6,12 @@ import (
 	"os"
 
 	"github.com/go-kit/log/level"
-	_ "github.com/mattn/go-oci8"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
+	_ "github.com/sijms/go-ora/v2"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/common/promlog"
