@@ -76,7 +76,7 @@ type Metrics struct {
 
 var (
 	additionalMetrics Metrics
-	hashMap           map[int][]byte
+	hashMap           = make(map[int][]byte)
 	namespace         = "oracledb"
 	exporterName      = "exporter"
 )
