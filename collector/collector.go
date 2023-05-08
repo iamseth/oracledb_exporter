@@ -39,21 +39,23 @@ type Exporter struct {
 
 // Config is the configuration of the exporter
 type Config struct {
-	DSN           string
-	MaxIdleConns  int
-	MaxOpenConns  int
-	CustomMetrics string
-	QueryTimeout  int
+	DSN                string
+	MaxIdleConns       int
+	MaxOpenConns       int
+	CustomMetrics      string
+	QueryTimeout       int
+	DefaultMetricsFile string
 }
 
 // CreateDefaultConfig returns the default configuration of the Exporter
 // it is to be of note that the DNS will be empty when
 func CreateDefaultConfig() *Config {
 	return &Config{
-		MaxIdleConns:  0,
-		MaxOpenConns:  10,
-		CustomMetrics: "",
-		QueryTimeout:  5,
+		MaxIdleConns:       0,
+		MaxOpenConns:       10,
+		CustomMetrics:      "",
+		QueryTimeout:       5,
+		DefaultMetricsFile: "",
 	}
 }
 

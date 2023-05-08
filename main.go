@@ -46,11 +46,12 @@ func main() {
 	dsn := os.Getenv("DATA_SOURCE_NAME")
 
 	config := &collector.Config{
-		DSN:           dsn,
-		MaxOpenConns:  *maxOpenConns,
-		MaxIdleConns:  *maxIdleConns,
-		CustomMetrics: *customMetrics,
-		QueryTimeout:  *queryTimeout,
+		DSN:                dsn,
+		MaxOpenConns:       *maxOpenConns,
+		MaxIdleConns:       *maxIdleConns,
+		CustomMetrics:      *customMetrics,
+		QueryTimeout:       *queryTimeout,
+		DefaultMetricsFile: *defaultFileMetrics,
 	}
 	exporter, err := collector.NewExporter(logger, config)
 	if err != nil {
