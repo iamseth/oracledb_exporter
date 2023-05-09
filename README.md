@@ -51,29 +51,29 @@ The following metrics are exposed currently.
 
 You can run via Docker using an existing image. Since version 0.4, the images are available on the github registry.
 
-Here an example to retrieve the version 0.4.3:
+Here an example to retrieve the version 0.5.0:
 
 ```bash
-docker pull ghcr.io/iamseth/oracledb_exporter:0.4.3
+docker pull ghcr.io/iamseth/oracledb_exporter:0.5.0
 ```
 
 And here a command to run it and forward the port:
 
 ```bash
-docker run -it --rm -p 9161:9161 ghcr.io/iamseth/oracledb_exporter:0.4.3
+docker run -it --rm -p 9161:9161 ghcr.io/iamseth/oracledb_exporter:0.5.0
 ```
 
 If you don't already have an Oracle server, you can run one locally in a container and then link the exporter to it.
 
 ```bash
 docker run -d --name oracle -p 1521:1521 wnameless/oracle-xe-11g-r2:18.04-apex
-docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@oracle/xe ghcr.io/iamseth/oracledb_exporter:0.4.3
+docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=oracle://system:oracle@oracle:1521/xe ghcr.io/iamseth/oracledb_exporter:0.5.0
 ```
 
 Since 0.2.1, the exporter image exist with Alpine flavor. Watch out for their use. It is for the moment a test.
 
 ```bash
-docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@oracle/xe iamseth/oracledb_exporter:alpine
+docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=oracle://system:oracle@oracle/xe iamseth/oracledb_exporter:alpine
 ```
 
 ### Different Docker Images
@@ -103,23 +103,25 @@ for your operating system. Only the basic version is required for execution.
 
 # Running
 Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting.
-DATA_SOURCE_NAME should be in Oracle EZCONNECT format:  
- https://docs.oracle.com/en/database/oracle/oracle-database/19/netag/configuring-naming-methods.html#GUID-B0437826-43C1-49EC-A94D-B650B6A4A6EE  
-19c Oracle Client supports enhanced EZCONNECT, you are able to failover to standby DB or gather some heavy metrics from active standby DB and specify some additional parameters. Within 19c client you are able to connect 12c primary/standby DB too :)
+DATA_SOURCE_NAME should be in Oracle Database connection string format:  
+
+```conn
+    oracle://user:pass@server/service_name[?OPTION1=VALUE1[&OPTIONn=VALUEn]...]
+```
 
 For Example:
 
 ```bash
 # export Oracle location:
-export DATA_SOURCE_NAME=system/password@oracle-sid
+export DATA_SOURCE_NAME=oracle://system:password@oracle-sid
 # or using a complete url:
-export DATA_SOURCE_NAME=user/password@//myhost:1521/service
+export DATA_SOURCE_NAME=oracle://user:password@myhost:1521/service
 # 19c client for primary/standby configuration
-export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/service
+export DATA_SOURCE_NAME=oracle://user:password@primaryhost:1521,standbyhost:1521/service
 # 19c client for primary/standby configuration with options
-export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/service?connect_timeout=5&transport_connect_timeout=3&retry_count=3
+export DATA_SOURCE_NAME=oracle://user:password@primaryhost:1521,standbyhost:1521/service?connect_timeout=5&transport_connect_timeout=3&retry_count=3
 # 19c client for ASM instance connection (requires SYSDBA)
-export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/+ASM?as=sysdba
+export DATA_SOURCE_NAME=oracle://user:password@primaryhost:1521,standbyhost:1521/+ASM?as=sysdba
 # Then run the exporter
 /path/to/binary/oracledb_exporter --log.level error --web.listen-address 0.0.0.0:9161
 ```
@@ -352,7 +354,7 @@ database =
 
 - `TNS_ENTRY`: Name of the entry to use (`database` in the example file above)
 - `TNS_ADMIN`: Path you choose for the tns admin folder (`/path/to/tns_admin` in the example file above)
-- `DATA_SOURCE_NAME`: Datasource pointing to the `TNS_ENTRY` (`user/password@database` in the example file above)
+- `DATA_SOURCE_NAME`: Datasource pointing to the `TNS_ENTRY` (`user:password@database` in the example file above)
 
 # TLS connection to database
 
@@ -381,7 +383,7 @@ ssl_server_dn_match parameter.
 
 Here a complete example of string connection:
 
-    DATA_SOURCE_NAME=username/password@tcps://dbhost:port/service?ssl_server_dn_match=false&wallet_location=wallet_path
+    DATA_SOURCE_NAME=oracle://username:password@server:port/service?ssl_server_dn_match=false&wallet_location=wallet_path
 
 For more details, have a look at the following location: https://github.com/iamseth/oracledb_exporter/issues/84
 
@@ -488,7 +490,7 @@ version as they are embedded in the container.
 
 Here an example to run this exporter (to scrap metrics from system/oracle@//host:1521/service-or-sid) and bind the exporter port (9161) to the global machine:
 
-`docker run -it --rm -p 9161:9161 -e DATA_SOURCE_NAME=system/oracle@//host:1521/service-or-sid iamseth/oracledb_exporter:0.2.6a`
+`docker run -it --rm -p 9161:9161 -e DATA_SOURCE_NAME=oracle://system/oracle@//host:1521/service-or-sid iamseth/oracledb_exporter:0.2.6a`
 
 ## Error scraping for wait_time
 
