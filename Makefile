@@ -4,16 +4,9 @@ ARCH_TYPE      ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(ARCH)))
 GOOS           ?= $(shell go env GOOS)
 GOARCH         ?= $(shell go env GOARCH)
 VERSION        ?= 0.5.0
-MAJOR_VERSION  ?= 21
-MINOR_VERSION  ?= 8
-ORACLE_VERSION ?= $(MAJOR_VERSION).$(MINOR_VERSION)
-ORACLE_IMAGE   ?= ghcr.io/oracle/oraclelinux8-instantclient:$(MAJOR_VERSION)
-PKG_VERSION    ?= $(ORACLE_VERSION).0.0.0-1.el8.$(ARCH)
-GLIBC_VERSION	 ?= 2.35-r0
 LDFLAGS        := -X main.Version=$(VERSION)
 GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
-BUILD_ARGS      = --build-arg VERSION=$(VERSION) --build-arg ORACLE_VERSION=$(ORACLE_VERSION) \
-                  --build-arg MAJOR_VERSION=$(MAJOR_VERSION) --build-arg ORACLE_IMAGE=$(ORACLE_IMAGE)
+BUILD_ARGS      = --build-arg VERSION=$(VERSION)
 LEGACY_TABLESPACE = --build-arg LEGACY_TABLESPACE=.legacy-tablespace
 OUTDIR          = ./dist
 
@@ -22,27 +15,28 @@ IMAGE_ID       ?= $(IMAGE_NAME):$(VERSION)
 IMAGE_ID_LATEST?= $(IMAGE_NAME):latest
 RELEASE        ?= true
 
+UBUNTU_BASE_IMAGE       ?= docker.io/library/ubuntu:23.04
+ORACLE_LINUX_BASE_IMAGE ?= docker.io/library/oraclelinux:8-slim
+ALPINE_BASE_IMAGE       ?= docker.io/library/alpine:3.17
+
 ifeq ($(GOOS), windows)
 EXT?=.exe
 else
 EXT?=
 endif
 
-export LD_LIBRARY_PATH ORACLE_VERSION
+export LD_LIBRARY_PATH
 
 version:
 	@echo "$(VERSION)"
 
-oracle-version:
-	@echo "$(ORACLE_VERSION)"
-
 .PHONY: go-build
 go-build:
 	@echo "Build $(OS_TYPE)"
-	mkdir -p $(OUTDIR)/oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(GOOS)-$(GOARCH)/
-	go build $(GOFLAGS) -o $(OUTDIR)/oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(GOOS)-$(GOARCH)/oracledb_exporter$(EXT)
+	mkdir -p $(OUTDIR)/oracledb_exporter-$(VERSION).$(GOOS)-$(GOARCH)/
+	go build $(GOFLAGS) -o $(OUTDIR)/oracledb_exporter-$(VERSION).$(GOOS)-$(GOARCH)/oracledb_exporter$(EXT)
 	cp default-metrics.toml $(OUTDIR)/$(DIST_DIR)
-	(cd dist ; tar cfz oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(GOOS)-$(GOARCH).tar.gz oracledb_exporter-$(VERSION)-ora$(ORACLE_VERSION).$(GOOS)-$(GOARCH))
+	(cd dist ; tar cfz oracledb_exporter-$(VERSION).$(GOOS)-$(GOARCH).tar.gz oracledb_exporter-$(VERSION).$(GOOS)-$(GOARCH))
 
 .PHONY: go-build-linux-amd64
 go-build-linux-amd64:
@@ -95,16 +89,12 @@ push-images:
 	@make --no-print-directory push-oraclelinux-image
 	@make --no-print-directory push-alpine-image
 
-glibc.apk:
-	wget -q -O sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub
-	wget -q -O glibc-$(GLIBC_VERSION).apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$(GLIBC_VERSION)/glibc-$(GLIBC_VERSION).apk
-
 oraclelinux-image:
 	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)-oraclelinux" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)-oraclelinux\" already exists on ghcr.io"; \
 	else \
-		docker build --progress=plain -f oraclelinux/Dockerfile $(BUILD_ARGS) -t "$(IMAGE_ID)-oraclelinux" . && \
-		docker build --progress=plain -f oraclelinux/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)-oraclelinux_legacy-tablespace" . && \
+		docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-oraclelinux" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . && \
+		docker build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)-oraclelinux_legacy-tablespace" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . && \
 		docker tag "$(IMAGE_ID)-oraclelinux" "$(IMAGE_NAME):oraclelinux"; \
 	fi
 
@@ -126,8 +116,8 @@ ubuntu-image:
 	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)\" already exists on ghcr.io"; \
 	else \
-		docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)" . && \
-		docker build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)_legacy-tablespace" . && \
+		docker build --progress=plain $(BUILD_ARGS) --build-arg BASE_IMAGE=$(UBUNTU_BASE_IMAGE) -t "$(IMAGE_ID)" . && \
+		docker build --progress=plain $(BUILD_ARGS) --build-arg BASE_IMAGE=$(UBUNTU_BASE_IMAGE) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)_legacy-tablespace" . && \
 		docker tag "$(IMAGE_ID)" "$(IMAGE_ID_LATEST)"; \
 	fi
 
@@ -150,8 +140,8 @@ alpine-image:
 	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)-alpine" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)-alpine\" already exists on ghcr.io"; \
 	else \
-		docker build --progress=plain -f alpine/Dockerfile $(BUILD_ARGS) -t "$(IMAGE_ID)-alpine" . && \
-		docker build --progress=plain -f alpine/Dockerfile $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)-alpine_legacy-tablespace" . && \
+		docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-alpine" --build-arg BASE_IMAGE=$(ALPINE_BASE_IMAGE) . && \
+		docker build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) --build-arg BASE_IMAGE=$(ALPINE_BASE_IMAGE) -t "$(IMAGE_ID)-alpine_legacy-tablespace" . && \
 		docker tag "$(IMAGE_ID)-alpine" "$(IMAGE_NAME):alpine"; \
 	fi
 
@@ -168,4 +158,4 @@ else
 	@echo "Can't find cosign.key file"
 endif
 
-.PHONY: version build deps go-test clean docker glibc.apk
+.PHONY: version build deps go-test clean docker
