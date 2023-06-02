@@ -1,0 +1,29 @@
+name: Push
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  on-success:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger jenkins job to upload master to Quay.io
+      uses: toptal/jenkins-job-trigger-action@master
+      with:
+        jenkins_url: "https://jenkins.internal.sysdig.tools/"
+        jenkins_user: 'jenkins+qa@sysdig.com'
+        jenkins_token: ${{ secrets.JENKINS_PROMCAT_LAUNCH_TOKEN_SMPROD13666 }}
+        job_name: "promcat/job/exporters/job/integrations-oracledb-exporter"
+        job_params: |
+          {
+            "DRY_RUN": "false",
+            "SCRATCH": "true",
+            "EXPORTER": "oracledb-exporter"
+          }
