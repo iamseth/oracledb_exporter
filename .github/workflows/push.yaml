@@ -19,7 +19,7 @@ jobs:
       with:
         jenkins_url: "https://jenkins.internal.sysdig.tools/"
         jenkins_user: 'jenkins+qa@sysdig.com'
-        jenkins_token: ${{ secrets.JENKINS_PROMCAT_LAUNCH_TOKEN_SMPROD13666 }}
+        jenkins_token: ${{ secrets.JENKINS_QA_PROMCAT_API_TOKEN_TEMP }}
         job_name: "promcat/job/exporters/job/integrations-oracledb-exporter"
         job_params: |
           {
