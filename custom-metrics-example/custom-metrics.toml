@@ -43,3 +43,13 @@ context = "size_dba_segments_top100"
 metricsdesc = {cluster_bytes="Gauge metric with the size of the cluster in user segments."}
 labels = ["segment_name"]
 request = "select * from (select segment_name,sum(bytes) as cluster_bytes from dba_segments where segment_type='CLUSTER' group by segment_name) order by cluster_bytes DESC FETCH NEXT 100 ROWS ONLY"
+
+[[metric]]
+context = "cache_hit_ratio"
+metricsdesc = {percentage="Gauge metric with the cache hit ratio."}
+request = "select Round(((Sum(Decode(a.name, 'consistent gets', a.value, 0)) + Sum(Decode(a.name, 'db block gets', a.value, 0)) - Sum(Decode(a.name, 'physical reads', a.value, 0))  )/ (Sum(Decode(a.name, 'consistent gets', a.value, 0)) + Sum(Decode(a.name, 'db block gets', a.value, 0)))) *100,2) as percentage FROM v$sysstat a"
+
+[[metric]]
+context = "startup"
+metricsdesc = {time_seconds="Database startup time in seconds."}
+request = "SELECT (SYSDATE - STARTUP_TIME) * 24 * 60 * 60 AS time_seconds FROM V$INSTANCE"
