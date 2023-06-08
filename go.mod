@@ -3,7 +3,7 @@ module github.com/iamseth/oracledb_exporter
 go 1.19
 
 require (
-	github.com/BurntSushi/toml v1.2.1
+	github.com/BurntSushi/toml v1.3.2
 	github.com/alecthomas/kingpin/v2 v2.3.2
 	github.com/go-kit/log v0.2.1
 	github.com/prometheus/client_golang v1.15.1
