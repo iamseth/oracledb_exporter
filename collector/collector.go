@@ -253,13 +253,13 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 			level.Info(e.logger).Log("Reconnecting to DB")
 			err = e.connect()
 			if err != nil {
-				level.Error(e.logger).Log("Error reconnecting to DB", err)
+				level.Error(e.logger).Log("Error reconnecting to DB ", err)
 			}
 		}
 	}
 
 	if err = e.db.Ping(); err != nil {
-		level.Error(e.logger).Log("Error pinging oracle:", err)
+		level.Error(e.logger).Log("Error pinging oracle: ", err)
 		e.up.Set(0)
 		return
 	}
