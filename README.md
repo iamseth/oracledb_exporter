@@ -354,7 +354,7 @@ database =
 
 - `TNS_ENTRY`: Name of the entry to use (`database` in the example file above)
 - `TNS_ADMIN`: Path you choose for the tns admin folder (`/path/to/tns_admin` in the example file above)
-- `DATA_SOURCE_NAME`: Datasource pointing to the `TNS_ENTRY` (`user:password@database` in the example file above)
+- `DATA_SOURCE_NAME`: Datasource pointing to the `TNS_ENTRY` (`oracle://user:password@database/` in the example file above)
 
 # TLS connection to database
 
