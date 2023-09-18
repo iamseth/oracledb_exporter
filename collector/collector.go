@@ -312,7 +312,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 			scrapeStart := time.Now()
 			if err = e.ScrapeMetric(e.db, ch, metric); err != nil {
-				level.Error(e.logger).Log("Error scraping for", metric.Context, "_", metric.MetricsDesc, time.Since(scrapeStart), ":", err)
+				level.Error(e.logger).Log("Error scraping for", metric.Context, "_", metric.MetricsDesc, time.Since(scrapeStart), ":", err.Error())
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
 				level.Debug(e.logger).Log("Successfully scraped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
