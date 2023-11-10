@@ -45,14 +45,14 @@ WHERE
 [[metric]]
 context = "tablespace"
 labels = [ "tablespace", "type" ]
-metricsdesc = { bytes = "Generic counter metric of tablespaces bytes in Oracle.", max_bytes = "Generic counter metric of tablespaces max bytes in Oracle.", free = "Generic counter metric of tablespaces free bytes in Oracle.", used_percent = "Gauge metric showing as a percentage of how much of the tablespace has been used." }
+metricsdesc = { bytes = "Generic counter metric of tablespaces bytes in Oracle.", max_bytes = "Generic counter metric of tablespaces max bytes in Oracle.", free_bytes = "Generic counter metric of tablespaces free bytes in Oracle.", used_percent = "Gauge metric showing as a percentage of how much of the tablespace has been used." }
 request = '''
 SELECT
     dt.tablespace_name as tablespace,
     dt.contents as type,
     dt.block_size * dtum.used_space as bytes,
     dt.block_size * dtum.tablespace_size as max_bytes,
-    dt.block_size * (dtum.tablespace_size - dtum.used_space) as free,
+    dt.block_size * (dtum.tablespace_size - dtum.used_space) as free_bytes,
     dtum.used_percent
 FROM  dba_tablespace_usage_metrics dtum, dba_tablespaces dt
 WHERE dtum.tablespace_name = dt.tablespace_name
