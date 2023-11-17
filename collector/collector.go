@@ -574,11 +574,11 @@ func getMetricType(metricType string, metricsType map[string]string) prometheus.
 }
 
 func cleanName(s string) string {
-	s = strings.Replace(s, " ", "_", -1) // Remove spaces
-	s = strings.Replace(s, "(", "", -1)  // Remove open parenthesis
-	s = strings.Replace(s, ")", "", -1)  // Remove close parenthesis
-	s = strings.Replace(s, "/", "", -1)  // Remove forward slashes
-	s = strings.Replace(s, "*", "", -1)  // Remove asterisks
+	s = strings.ReplaceAll(s, " ", "_") // Remove spaces
+	s = strings.ReplaceAll(s, "(", "")  // Remove open parenthesis
+	s = strings.ReplaceAll(s, ")", "")  // Remove close parenthesis
+	s = strings.ReplaceAll(s, "/", "")  // Remove forward slashes
+	s = strings.ReplaceAll(s, "*", "")  // Remove asterisks
 	s = strings.ToLower(s)
 	return s
 }
