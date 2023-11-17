@@ -113,7 +113,7 @@ func NewExporter(logger log.Logger, cfg *Config) (*Exporter, error) {
 			Namespace: namespace,
 			Subsystem: exporterName,
 			Name:      "scrape_errors_total",
-			Help:      "Total number of times an error occured scraping a Oracle database.",
+			Help:      "Total number of times an error occurred scraping a Oracle database.",
 		}, []string{"collector"}),
 		error: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
@@ -253,13 +253,13 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 			level.Info(e.logger).Log("Reconnecting to DB")
 			err = e.connect()
 			if err != nil {
-				level.Error(e.logger).Log("Error reconnecting to DB", err)
+				level.Error(e.logger).Log("error reconnecting to DB", err.Error())
 			}
 		}
 	}
 
 	if err = e.db.Ping(); err != nil {
-		level.Error(e.logger).Log("Error pinging oracle:", err)
+		level.Error(e.logger).Log("error pinging oracle:", err.Error())
 		e.up.Set(0)
 		return
 	}
@@ -312,10 +312,10 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 			scrapeStart := time.Now()
 			if err = e.ScrapeMetric(e.db, ch, metric); err != nil {
-				level.Error(e.logger).Log("Error scraping for", metric.Context, "_", metric.MetricsDesc, time.Since(scrapeStart), ":", err.Error())
+				level.Error(e.logger).Log("error scraping for", metric.Context, "_", metric.MetricsDesc, time.Since(scrapeStart), ":", err.Error())
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
-				level.Debug(e.logger).Log("Successfully scraped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
+				level.Debug(e.logger).Log("successfully scraped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
 			}
 		}
 		go f()
@@ -324,17 +324,17 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 }
 
 func (e *Exporter) connect() error {
-	level.Debug(e.logger).Log("Launching connection: ", maskDsn(e.dsn))
+	level.Debug(e.logger).Log("launching connection: ", maskDsn(e.dsn))
 	db, err := sql.Open("oracle", e.dsn)
 	if err != nil {
-		level.Error(e.logger).Log("Error while connecting to", e.dsn)
+		level.Error(e.logger).Log("error while connecting to", e.dsn)
 		return err
 	}
 	level.Debug(e.logger).Log("set max idle connections to ", e.config.MaxIdleConns)
 	db.SetMaxIdleConns(e.config.MaxIdleConns)
 	level.Debug(e.logger).Log("set max open connections to ", e.config.MaxOpenConns)
 	db.SetMaxOpenConns(e.config.MaxOpenConns)
-	level.Debug(e.logger).Log("Successfully connected to: ", maskDsn(e.dsn))
+	level.Debug(e.logger).Log("successfully connected to: ", maskDsn(e.dsn))
 	e.db = db
 	return nil
 }
@@ -344,10 +344,10 @@ func (e *Exporter) checkIfMetricsChanged() bool {
 		if len(_customMetrics) == 0 {
 			continue
 		}
-		level.Debug(e.logger).Log("Checking modifications in following metrics definition file:", _customMetrics)
+		level.Debug(e.logger).Log("checking modifications in following metrics definition file:", _customMetrics)
 		h := sha256.New()
 		if err := hashFile(h, _customMetrics); err != nil {
-			level.Error(e.logger).Log("Unable to get file hash", err)
+			level.Error(e.logger).Log("unable to get file hash", err.Error())
 			return false
 		}
 		// If any of files has been changed reload metrics
@@ -398,7 +398,7 @@ func (e *Exporter) reloadMetrics() {
 
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
 func (e *Exporter) ScrapeMetric(db *sql.DB, ch chan<- prometheus.Metric, metricDefinition Metric) error {
-	level.Debug(e.logger).Log("Calling function ScrapeGenericValues()")
+	level.Debug(e.logger).Log("calling function ScrapeGenericValues()")
 	return e.scrapeGenericValues(db, ch, metricDefinition.Context, metricDefinition.Labels,
 		metricDefinition.MetricsDesc, metricDefinition.MetricsType, metricDefinition.MetricsBuckets,
 		metricDefinition.FieldToAppend, metricDefinition.IgnoreZeroResult,
