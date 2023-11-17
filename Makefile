@@ -9,6 +9,14 @@ GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
 BUILD_ARGS      = --build-arg VERSION=$(VERSION)
 LEGACY_TABLESPACE = --build-arg LEGACY_TABLESPACE=.legacy-tablespace
 OUTDIR          = ./dist
+LINTER_VERSION ?= v1.55.2
+LINTER_IMAGE   ?= docker.io/golangci/golangci-lint:$(LINTER_VERSION)
+
+ifeq ($(shell command -v podman 2> /dev/null),)
+    DOCKER_CMD  = docker
+else
+    DOCKER_CMD  = podman
+endif
 
 IMAGE_NAME     ?= iamseth/oracledb_exporter
 IMAGE_ID       ?= $(IMAGE_NAME):$(VERSION)
@@ -64,7 +72,9 @@ go-build-windows-x86:
 
 go-lint:
 	@echo "Linting codebase"
-	docker run --rm -v $(shell pwd):/app -v ~/.cache/golangci-lint/v1.50.1:/root/.cache -w /app golangci/golangci-lint:v1.50.1 golangci-lint run -v
+	mkdir -p ~/.cache/golangci-lint/$(LINTER_VERSION)
+	$(DOCKER_CMD) run --rm -v $$PWD:/app -v ~/.cache/golangci-lint/$(LINTER_VERSION):/root/.cache -w /app \
+	                $(LINTER_IMAGE) golangci-lint run -v
 
 local-build: go-build
 	@true
@@ -90,19 +100,19 @@ push-images:
 	@make --no-print-directory push-alpine-image
 
 oraclelinux-image:
-	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)-oraclelinux" > /dev/null; then \
+	if DOCKER_CLI_EXPERIMENTAL=enabled $(DOCKER_CMD) manifest inspect "$(IMAGE_ID)-oraclelinux" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)-oraclelinux\" already exists on ghcr.io"; \
 	else \
-		docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-oraclelinux" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . && \
-		docker build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)-oraclelinux_legacy-tablespace" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . && \
-		docker tag "$(IMAGE_ID)-oraclelinux" "$(IMAGE_NAME):oraclelinux"; \
+		$(DOCKER_CMD) build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-oraclelinux" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . && \
+		$(DOCKER_CMD) build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)-oraclelinux_legacy-tablespace" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . && \
+		$(DOCKER_CMD) tag "$(IMAGE_ID)-oraclelinux" "$(IMAGE_NAME):oraclelinux"; \
 	fi
 
 push-oraclelinux-image:
-	docker push $(IMAGE_ID)-oraclelinux
+	$(DOCKER_CMD) push $(IMAGE_ID)-oraclelinux
 ifeq ("$(RELEASE)", "true")
-	docker push "$(IMAGE_NAME):oraclelinux"
-	docker push "$(IMAGE_ID)-oraclelinux_legacy-tablespace"
+	$(DOCKER_CMD) push "$(IMAGE_NAME):oraclelinux"
+	$(DOCKER_CMD) push "$(IMAGE_ID)-oraclelinux_legacy-tablespace"
 endif
 
 sign-oraclelinux-image:
@@ -113,19 +123,19 @@ else
 endif
 
 ubuntu-image:
-	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)" > /dev/null; then \
+	if DOCKER_CLI_EXPERIMENTAL=enabled $(DOCKER_CMD) manifest inspect "$(IMAGE_ID)" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)\" already exists on ghcr.io"; \
 	else \
-		docker build --progress=plain $(BUILD_ARGS) --build-arg BASE_IMAGE=$(UBUNTU_BASE_IMAGE) -t "$(IMAGE_ID)" . && \
-		docker build --progress=plain $(BUILD_ARGS) --build-arg BASE_IMAGE=$(UBUNTU_BASE_IMAGE) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)_legacy-tablespace" . && \
-		docker tag "$(IMAGE_ID)" "$(IMAGE_ID_LATEST)"; \
+		$(DOCKER_CMD) build --progress=plain $(BUILD_ARGS) --build-arg BASE_IMAGE=$(UBUNTU_BASE_IMAGE) -t "$(IMAGE_ID)" . && \
+		$(DOCKER_CMD) build --progress=plain $(BUILD_ARGS) --build-arg BASE_IMAGE=$(UBUNTU_BASE_IMAGE) $(LEGACY_TABLESPACE) -t "$(IMAGE_ID)_legacy-tablespace" . && \
+		$(DOCKER_CMD) tag "$(IMAGE_ID)" "$(IMAGE_ID_LATEST)"; \
 	fi
 
 push-ubuntu-image:
-	docker push $(IMAGE_ID)
+	$(DOCKER_CMD) push $(IMAGE_ID)
 ifeq ("$(RELEASE)", "true")
-	docker push "$(IMAGE_ID_LATEST)"
-	docker push "$(IMAGE_ID)_legacy-tablespace"
+	$(DOCKER_CMD) push "$(IMAGE_ID_LATEST)"
+	$(DOCKER_CMD) push "$(IMAGE_ID)_legacy-tablespace"
 endif
 
 sign-ubuntu-image:
@@ -137,18 +147,18 @@ else
 endif
 
 alpine-image:
-	if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$(IMAGE_ID)-alpine" > /dev/null; then \
+	if DOCKER_CLI_EXPERIMENTAL=enabled $(DOCKER_CMD) manifest inspect "$(IMAGE_ID)-alpine" > /dev/null; then \
 		echo "Image \"$(IMAGE_ID)-alpine\" already exists on ghcr.io"; \
 	else \
-		docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-alpine" --build-arg BASE_IMAGE=$(ALPINE_BASE_IMAGE) . && \
-		docker build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) --build-arg BASE_IMAGE=$(ALPINE_BASE_IMAGE) -t "$(IMAGE_ID)-alpine_legacy-tablespace" . && \
-		docker tag "$(IMAGE_ID)-alpine" "$(IMAGE_NAME):alpine"; \
+		$(DOCKER_CMD) build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-alpine" --build-arg BASE_IMAGE=$(ALPINE_BASE_IMAGE) . && \
+		$(DOCKER_CMD) build --progress=plain $(BUILD_ARGS) $(LEGACY_TABLESPACE) --build-arg BASE_IMAGE=$(ALPINE_BASE_IMAGE) -t "$(IMAGE_ID)-alpine_legacy-tablespace" . && \
+		$(DOCKER_CMD) tag "$(IMAGE_ID)-alpine" "$(IMAGE_NAME):alpine"; \
 	fi
 
 push-alpine-image:
-	docker push $(IMAGE_ID)-alpine
+	$(DOCKER_CMD) push $(IMAGE_ID)-alpine
 ifeq ("$(RELEASE)", "true")
-	docker push "$(IMAGE_NAME):alpine"
+	$(DOCKER_CMD) push "$(IMAGE_NAME):alpine"
 endif
 
 sign-alpine-image:
