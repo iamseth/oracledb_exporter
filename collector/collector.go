@@ -277,7 +277,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		wg.Add(1)
 		metric := metric //https://golang.org/doc/faq#closures_and_goroutines
 
-		go func() {
+		f := func() {
 			defer wg.Done()
 
 			level.Debug(e.logger).Log("About to scrape metric: ")
@@ -317,7 +317,8 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 			} else {
 				level.Debug(e.logger).Log("Successfully scraped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
 			}
-		}()
+		}
+		go f()
 	}
 	wg.Wait()
 }
@@ -516,8 +517,8 @@ func (e *Exporter) generatePrometheusMetrics(db *sql.DB, parse func(row map[stri
 	defer cancel()
 	rows, err := db.QueryContext(ctx, query)
 
-	if ctx.Err() == context.DeadlineExceeded {
-		return errors.New("Oracle query timed out")
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return errors.New("oracle query timed out")
 	}
 
 	if err != nil {
