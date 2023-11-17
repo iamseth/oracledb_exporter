@@ -101,7 +101,7 @@ Pre-compiled versions for Linux 64 bit and Mac OSX 64 bit can be found under [re
 In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html)
 for your operating system. Only the basic version is required for execution.
 
-# Running
+## Running
 Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting.
 DATA_SOURCE_NAME should be in Oracle Database connection string format:  
 
@@ -125,6 +125,20 @@ export DATA_SOURCE_NAME=oracle://user:password@primaryhost:1521,standbyhost:1521
 # Then run the exporter
 /path/to/binary/oracledb_exporter --log.level error --web.listen-address 0.0.0.0:9161
 ```
+
+Version 0.5+ of the exporter is using a go lang driver that don't need the binaries from Oracle. As a side effect, you must transform your string version in order to be compatible with this driver.
+
+Basicaly, it consist to follow this convention:
+- Add a string `oracle://` in front of the string
+- Replace the slash (`/`) between user and password by a colon (`:`)
+
+Here is some example:
+
+| Old string format                   | New string format                            |
+|-------------------------------------|----------------------------------------------|
+| `system/password@oracle-sid`        | `oracle://system:password@oracle-sid`        |
+| `user/password@myhost:1521/service` | `oracle://user:password@myhost:1521/service` |
+
 ## Default-metrics requirement
 Make sure to grant `SYS` privilege on `SELECT` statement for the monitoring user, on the following tables.
 ```
@@ -142,16 +156,19 @@ v$resource_limit
 
 # Integration with System D
 
-Create **oracledb_exporter** user with disabled login and **oracledb_exporter** group\
-mkdir /etc/oracledb_exporter\
+Create `oracledb_exporter` user with disabled login and `oracledb_exporter` group then run the following commands:
+
+```bash
+mkdir /etc/oracledb_exporter
 chown root:oracledb_exporter /etc/oracledb_exporter  
 chmod 775 /etc/oracledb_exporter  
 Put config files to **/etc/oracledb_exporter**  
 Put binary to **/usr/local/bin**
+```
 
 Create file **/etc/systemd/system/oracledb_exporter.service** with the following content:
 
-```bash
+```
 [Unit]
 Description=Service for oracle telemetry client
 After=network.target
@@ -159,10 +176,6 @@ After=network.target
 Type=oneshot
 #!!! Set your values and uncomment
 #User=oracledb_exporter
-#Group=oracledb_exporter
-#Environment="DATA_SOURCE_NAME=dbsnmp/Bercut01@//primaryhost:1521,standbyhost:1521/myservice?transport_connect_timeout=5&retry_count=3"
-#Environment="LD_LIBRARY_PATH=/u01/app/oracle/product/19.0.0/dbhome_1/lib"
-#Environment="ORACLE_HOME=/u01/app/oracle/product/19.0.0/dbhome_1"
 #Environment="CUSTOM_METRICS=/etc/oracledb_exporter/custom-metrics.toml"
 ExecStart=/usr/local/bin/oracledb_exporter  \
   --default.metrics "/etc/oracledb_exporter/default-metrics.toml"  \
@@ -171,7 +184,7 @@ ExecStart=/usr/local/bin/oracledb_exporter  \
 WantedBy=multi-user.target
 ```
 
-Then tell System D to read files:
+Tell System D to refresh:
 
     systemctl daemon-reload
 
@@ -481,8 +494,11 @@ You can increase the log level (`--log.level debug`) in order to get the stateme
 
 ## error while loading shared libraries: libclntsh.so.xx.x: cannot open shared object file: No such file or directory
 
-This exporter use libs from Oracle in order to connect to Oracle Database. If you are running the binary version, you
-must install the Oracle binaries somewhere on your machine and **you must install the good version number**. If the
+Version before 0.5 use libs from Oracle in order to connect to Oracle Database. After 0.5 release, the oracle exporter use an pure Go DB driver and don't need binaries from Oracle anymore.
+
+Please switch to version 0.5.
+
+For older version, you must install the Oracle binaries somewhere on your machine and **you must install the good version number**. If the
 error talk about the version 18.3, you **must** install 18.3 binary version. If it's 12.2, you **must** install 12.2.
 
 An alternative is to run this exporter using a Docker container. This way, you don't have to worry about Oracle binaries
