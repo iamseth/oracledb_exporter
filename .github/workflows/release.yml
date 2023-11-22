@@ -131,7 +131,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set releasw version
+      - name: Set release version
         id: version
         run: echo "version=${{ needs.build.outputs.version }}" >> $GITHUB_OUTPUT
 
@@ -173,6 +173,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Log in to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u $ --password-stdin
+
       - name: Build image
         id: docker-meta
         env:
@@ -182,14 +185,6 @@ jobs:
           TAG_SUFFIX=$(echo "-${{ matrix.name }}" | sed s/-ubuntu//)
           echo "image-id=$IMAGE_NAME" >> $GITHUB_OUTPUT
           echo "image-version=${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
-
-      - name: Log in to registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u $ --password-stdin
-
-      - name: Push image
-        env:
-          VERSION: "${{ needs.release.outputs.version }}"
-        run: |
           make push-${{ matrix.name }}-image
 
       - name: Setup cosign
@@ -210,7 +205,7 @@ jobs:
         run: make sign-${{ matrix.name }}-image
 
       - name: Container scan
-        uses: aquasecurity/trivy-action@0.8.0
+        uses: aquasecurity/trivy-action@0.14.0
         env:
           image-ref: "${{ steps.docker-meta.outputs.image-id }}:${{ steps.docker-meta.outputs.image-version }}"
         with:

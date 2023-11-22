@@ -191,6 +191,10 @@ jobs:
         with:
           ref: ${{ env.PULL_REQUEST_HEAD }}
 
+      - name: Log in to registry
+        if: ${{ env.FORKED == 'false' }}
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u $ --password-stdin
+
       - name: Build image
         id: docker-meta
         env:
@@ -200,16 +204,6 @@ jobs:
           TAG_SUFFIX=$(echo "-${{ matrix.name }}" | sed s/-ubuntu//)
           echo "image-id=$IMAGE_NAME" >> $GITHUB_OUTPUT
           echo "image-version=${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
-
-      - name: Log in to registry
-        if: ${{ env.FORKED == 'false' }}
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u $ --password-stdin
-
-      - name: Push image
-        if: ${{ env.FORKED == 'false' }}
-        env:
-          VERSION: "${{ needs.release.outputs.version }}"
-        run: |
           make push-${{ matrix.name }}-image
 
       - name: Format current time

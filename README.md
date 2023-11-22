@@ -13,7 +13,7 @@
 [Troubleshooting](#troubleshooting)  
 [Operating principles](operating-principles.md)
 
-# Description
+## Description
 
 A [Prometheus](https://prometheus.io/) exporter for Oracle modeled after the MySQL exporter. I'm not a DBA or seasoned Go developer so PRs definitely welcomed.
 
@@ -45,11 +45,11 @@ The following metrics are exposed currently.
 - oracledb_resource_current_utilization
 - oracledb_resource_limit_value
 
-# Installation
+## Installation
 
-## Docker
+### Docker / Podman
 
-You can run via Docker using an existing image. Since version 0.4, the images are available on the github registry.
+You can run via Docker/Podman using an existing image. Since version 0.4, the images are available on the github registry.
 
 Here an example to retrieve the version 0.5.0:
 
@@ -94,14 +94,14 @@ Manager. See https://github.com/iamseth/oracledb_exporter/issues/153 for
 details. The versions above should have a more useful tablespace utilization
 calculation going forward.
 
-## Binary Release
+### Binary Release
 
 Pre-compiled versions for Linux 64 bit and Mac OSX 64 bit can be found under [releases](https://github.com/iamseth/oracledb_exporter/releases).
 
 In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html)
 for your operating system. Only the basic version is required for execution.
 
-## Running
+#### Running
 Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting.
 DATA_SOURCE_NAME should be in Oracle Database connection string format:  
 
@@ -154,7 +154,7 @@ v$session
 v$resource_limit
 ```
 
-# Integration with System D
+#### Integration with System D
 
 Create `oracledb_exporter` user with disabled login and `oracledb_exporter` group then run the following commands:
 
@@ -222,12 +222,12 @@ Usage of oracledb_exporter:
         Path to configuration file that can enable TLS or authentication.
 ```
 
-# Default metrics
+## Default metrics
 
 This exporter comes with a set of default metrics defined in **default-metrics.toml**. You can modify this file or
 provide a different one using `default.metrics` option.
 
-# Custom metrics
+### Custom metrics
 
 > NOTE: Do not put a `;` at the end of your SQL queries as this will **NOT** work.
 
@@ -331,7 +331,7 @@ COPY custom-metrics.toml /
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
 
-# Using a multiple host data source name
+## Using a multiple host data source name
 
 > NOTE: This has been tested with v0.2.6a and will most probably work on versions above.
 
@@ -369,7 +369,7 @@ database =
 - `TNS_ADMIN`: Path you choose for the tns admin folder (`/path/to/tns_admin` in the example file above)
 - `DATA_SOURCE_NAME`: Datasource pointing to the `TNS_ENTRY` (`user:password@database` in the example file above)
 
-# TLS connection to database
+## TLS connection to database
 
 First, set the following variables:
 
@@ -400,13 +400,13 @@ Here a complete example of string connection:
 
 For more details, have a look at the following location: https://github.com/iamseth/oracledb_exporter/issues/84
 
-# Integration with Grafana
+## Integration with Grafana
 
 An example Grafana dashboard is available [here](https://grafana.com/grafana/dashboards/3333-oracledb/).
 
-# Build
+## Build
 
-## Docker build
+### Docker/Podman build
 
 To build Ubuntu and Alpine image, run the following command:
 
@@ -420,7 +420,7 @@ Or Alpine:
 
     make alpine-image
 
-## Building Binaries
+### Building Binaries
 
 Run build:
 
@@ -472,9 +472,9 @@ Here is a small snippet of an example usage of the exporter in code:
 
 ```
 
-# FAQ/Troubleshooting
+## FAQ/Troubleshooting
 
-## Unable to convert current value to float (metric=par,metri...in.go:285
+### Unable to convert current value to float (metric=par,metri...in.go:285
 
 Oracle is trying to send a value that we cannot convert to float. This could be anything like 'UNLIMITED' or 'UNDEFINED' or 'WHATEVER'.
 
@@ -492,11 +492,11 @@ If the value of limite_value is 'UNLIMITED', the request send back the value -1.
 
 You can increase the log level (`--log.level debug`) in order to get the statement generating this error.
 
-## error while loading shared libraries: libclntsh.so.xx.x: cannot open shared object file: No such file or directory
+### error while loading shared libraries: libclntsh.so.xx.x: cannot open shared object file: No such file or directory
 
 Version before 0.5 use libs from Oracle in order to connect to Oracle Database. After 0.5 release, the oracle exporter use an pure Go DB driver and don't need binaries from Oracle anymore.
 
-Please switch to version 0.5.
+**Please switch to version 0.5.**
 
 For older version, you must install the Oracle binaries somewhere on your machine and **you must install the good version number**. If the
 error talk about the version 18.3, you **must** install 18.3 binary version. If it's 12.2, you **must** install 12.2.
@@ -508,7 +508,7 @@ Here an example to run this exporter (to scrap metrics from system/oracle@//host
 
 `docker run -it --rm -p 9161:9161 -e DATA_SOURCE_NAME=oracle://system/oracle@//host:1521/service-or-sid iamseth/oracledb_exporter:0.2.6a`
 
-## Error scraping for wait_time
+### Error scraping for wait_time
 
 If you experience an error `Error scraping for wait_time: sql: Scan error on column index 1: converting driver.Value type string (",01") to a float64: invalid syntax source="main.go:144"` you may need to set the NLS_LANG variable.
 
@@ -521,7 +521,7 @@ export DATA_SOURCE_NAME=system/oracle@myhost
 
 If using Docker, set the same variable using the -e flag.
 
-## An Oracle instance generates a lot of trace files being monitored by exporter
+### An Oracle instance generates a lot of trace files being monitored by exporter
 
 As being said, Oracle instance may (and probably does) generate a lot of trace files alongside its alert log file, one trace file per scraping event. The trace file contains the following lines
 
@@ -539,7 +539,7 @@ The root cause is Oracle's reaction of quering ASM-related views without ASM use
 $ find $ORACLE_BASE/diag/rdbms -name '*.tr[cm]' -mtime +14 -delete
 ```
 
-## TLS and basic authentication
+### TLS and basic authentication
 
 Apache Exporter supports TLS and basic authentication. This enables better
 control of the various HTTP endpoints.
@@ -552,7 +552,7 @@ Note that the TLS and basic authentication settings affect all HTTP endpoints:
 /metrics for scraping, /probe for probing, and the web UI.
 
 
-## Multi-target support
+### Multi-target support
 
 This exporter supports the multi-target pattern. This allows running a single instance of this exporter for multiple Oracle targets.
 
