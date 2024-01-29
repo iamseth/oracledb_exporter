@@ -3,7 +3,7 @@ OS_TYPE        ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH_TYPE      ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(ARCH)))
 GOOS           ?= $(shell go env GOOS)
 GOARCH         ?= $(shell go env GOARCH)
-VERSION        ?= 0.5.2
+VERSION        ?= 0.6.0
 LDFLAGS        := -X main.Version=$(VERSION)
 GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
 BUILD_ARGS      = --build-arg VERSION=$(VERSION)
