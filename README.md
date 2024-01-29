@@ -6,11 +6,13 @@
 
 ##### Table of Contents
 
-[Description](#description)  
-[Installation](#installation)  
-[Running](#running)  
-[Grafana](#grafana)  
-[Troubleshooting](#troubleshooting)  
+[Description](#description)
+[Installation](#installation)
+[Running](#running)
+[Usage](#usage)
+[Grafana](#integration-with-grafana)
+[Build](#build)
+[Troubleshooting](#faqtroubleshooting)
 [Operating principles](operating-principles.md)
 
 ## Description
@@ -101,9 +103,9 @@ Pre-compiled versions for Linux 64 bit and Mac OSX 64 bit can be found under [re
 In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html)
 for your operating system. Only the basic version is required for execution.
 
-#### Running
+## Running
 Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting.
-DATA_SOURCE_NAME should be in Oracle Database connection string format:  
+DATA_SOURCE_NAME should be in Oracle Database connection string format:
 
 ```conn
     oracle://user:pass@server/service_name[?OPTION1=VALUE1[&OPTIONn=VALUEn]...]
@@ -131,6 +133,7 @@ Version 0.5+ of the exporter is using a go lang driver that don't need the binar
 Basicaly, it consist to follow this convention:
 - Add a string `oracle://` in front of the string
 - Replace the slash (`/`) between user and password by a colon (`:`)
+- special characters should be url-escaped, like in this jinja example template: `{{ password|urlencode()|regex_replace('/','%2F') }}`
 
 Here is some example:
 
@@ -139,7 +142,7 @@ Here is some example:
 | `system/password@oracle-sid`        | `oracle://system:password@oracle-sid`        |
 | `user/password@myhost:1521/service` | `oracle://user:password@myhost:1521/service` |
 
-## Default-metrics requirement
+### Default-metrics requirement
 Make sure to grant `SYS` privilege on `SELECT` statement for the monitoring user, on the following tables.
 ```
 dba_tablespace_usage_metrics
@@ -154,15 +157,15 @@ v$session
 v$resource_limit
 ```
 
-#### Integration with System D
+### Integration with System D
 
 Create `oracledb_exporter` user with disabled login and `oracledb_exporter` group then run the following commands:
 
 ```bash
 mkdir /etc/oracledb_exporter
-chown root:oracledb_exporter /etc/oracledb_exporter  
-chmod 775 /etc/oracledb_exporter  
-Put config files to **/etc/oracledb_exporter**  
+chown root:oracledb_exporter /etc/oracledb_exporter
+chmod 775 /etc/oracledb_exporter
+Put config files to **/etc/oracledb_exporter**
 Put binary to **/usr/local/bin**
 ```
 
@@ -205,9 +208,9 @@ Usage of oracledb_exporter:
   --log.level value
        	Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal].
   --custom.metrics string
-        File that may contain various custom metrics in a TOML file.
+        File that may contain various custom metrics in a toml or yaml format.
   --default.metrics string
-        Default TOML file metrics.
+        Default metrics file in a toml or yaml format.
   --web.systemd-socket
         Use systemd socket activation listeners instead of port listeners (Linux only).
   --web.listen-address string
@@ -222,24 +225,30 @@ Usage of oracledb_exporter:
         Connection string to a data source. (default "env: DATA_SOURCE_NAME")
   --web.config.file
         Path to configuration file that can enable TLS or authentication.
+  --query.timeout
+        Query timeout (in seconds). (default "5")
+  --scrape.interval
+        Interval between each scrape. Default "0s" is to scrape on collect requests
 ```
 
-## Default metrics
+### Default metrics config file
 
-This exporter comes with a set of default metrics defined in **default-metrics.toml**. You can modify this file or
-provide a different one using `default.metrics` option.
+This exporter comes with a set of default metrics: [**default-metrics.toml**](./default-metrics.toml)/[**default-metrics.yaml**](./default-metrics.yaml).\
+You can modify this file or provide a different one using `default.metrics` option.
 
-### Custom metrics
+### Custom metrics config file
 
 > NOTE: Do not put a `;` at the end of your SQL queries as this will **NOT** work.
 
-This exporter does not have the metrics you want? You can provide new one using TOML file. To specify this file to the
+This exporter does not have the metrics you want? You can provide new one using custom metrics config file in a toml or yaml format. To specify this file to the
 exporter, you can:
 
-- Use `--custom.metrics` flag followed by the TOML file
-- Export CUSTOM_METRICS variable environment (`export CUSTOM_METRICS=my-custom-metrics.toml`)
+- Use `--custom.metrics` flag followed by your custom config file
+- Export CUSTOM_METRICS variable environment (`export CUSTOM_METRICS=<path-to-custom-configfile>`)
 
-This file must contain the following elements:
+### Config file TOML syntax
+
+The file must contain the following elements:
 
 - One or several metric section (`[[metric]]`)
 - For each section a context, a request and a map between a field of your request and a comment.
@@ -311,17 +320,36 @@ metricstype = { value_1 = "counter" }
 This TOML file will produce the following result:
 
 ```
-# HELP oracledb_test_value_1 Simple test example returning always 1 as counter.
-# TYPE oracledb_test_value_1 counter
-oracledb_test_value_1 1
-# HELP oracledb_test_value_2 Same test but returning always 2 as gauge.
-# TYPE oracledb_test_value_2 gauge
-oracledb_test_value_2 2
+# HELP oracledb_context_with_labels_value_1 Simple example returning always 1 as counter.
+# TYPE oracledb_context_with_labels_value_1 counter
+oracledb_context_with_labels_value_1{label_1="First label",label_2="Second label"} 1
+# HELP oracledb_context_with_labels_value_2 Same but returning always 2 as gauge.
+# TYPE oracledb_context_with_labels_value_2 gauge
+oracledb_context_with_labels_value_2{label_1="First label",label_2="Second label"} 2
+
 ```
 
 You can find [here](./custom-metrics-example/custom-metrics.toml) a working example of custom metrics for slow queries, big queries and top 100 tables.
 
-# Customize metrics in a docker image
+### Config file YAML syntax
+
+yaml format has the same as the above requirements regarding optional and mandatory fields and their meaning, but needs a root element `metric`:
+```yaml
+metric:
+- context: "context_with_labels"
+  labels: [label_1,label_2]
+  metricsdesc:
+    value_1: "Simple example returning always 1 as counter."
+    value_2: "Same but returning always 2 as gauge."
+  request: "SELECT 'First label' as label_1, 'Second label' as label_2,
+    1 as value_1, 2 as value_2
+    FROM DUAL"
+  metricstype:
+    value_1: "counter"
+```
+
+For more practical examples, see [custom-metrics.yaml](./custom-metrics-example/custom-metrics.yaml)
+### Customize metrics in a docker image
 
 If you run the exporter as a docker image and want to customize the metrics, you can use the following example:
 
@@ -333,7 +361,7 @@ COPY custom-metrics.toml /
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
 
-## Using a multiple host data source name
+### Using a multiple host data source name
 
 > NOTE: This has been tested with v0.2.6a and will most probably work on versions above.
 
@@ -371,7 +399,7 @@ database =
 - `TNS_ADMIN`: Path you choose for the tns admin folder (`/path/to/tns_admin` in the example file above)
 - `DATA_SOURCE_NAME`: Datasource pointing to the `TNS_ENTRY` (`user:password@database` in the example file above)
 
-## TLS connection to database
+### TLS connection to database
 
 First, set the following variables:
 
@@ -490,7 +518,7 @@ metricsdesc = { current_utilization= "Generic counter metric from v$resource_lim
 request="SELECT resource_name,current_utilization,CASE WHEN TRIM(limit_value) LIKE 'UNLIMITED' THEN '-1' ELSE TRIM(limit_value) END as limit_value FROM v$resource_limit"
 ```
 
-If the value of limite_value is 'UNLIMITED', the request send back the value -1.
+If the value of limit_value is 'UNLIMITED', the request send back the value -1.
 
 You can increase the log level (`--log.level debug`) in order to get the statement generating this error.
 
