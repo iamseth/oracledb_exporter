@@ -26,8 +26,11 @@ import (
 
 var (
 	// Version will be set at build time.
-	Version            = "0.0.0.dev"
-	metricPath         = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics. (env: TELEMETRY_PATH)").Default(getEnv("TELEMETRY_PATH", "/metrics")).String()
+	Version    = "0.0.0.dev"
+	metricPath = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics. (env: TELEMETRY_PATH)").Default(getEnv("TELEMETRY_PATH", "/metrics")).String()
+	dsn        = kingpin.Flag("database.dsn",
+		"Connection string to a data source. (env: DATA_SOURCE_NAME)",
+	).Default(getEnv("DATA_SOURCE_NAME", "")).String()
 	defaultFileMetrics = kingpin.Flag(
 		"default.metrics",
 		"File with default metrics in a TOML file. (env: DEFAULT_METRICS)",
@@ -62,10 +65,9 @@ func main() {
 	kingpin.Version(version.Print("oracledb_exporter"))
 	kingpin.Parse()
 	logger := promlog.New(promLogConfig)
-	dsn := os.Getenv("DATA_SOURCE_NAME")
 
 	config := &collector.Config{
-		DSN:                dsn,
+		DSN:                *dsn,
 		MaxOpenConns:       *maxOpenConns,
 		MaxIdleConns:       *maxIdleConns,
 		CustomMetrics:      *customMetrics,
