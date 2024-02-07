@@ -3,6 +3,7 @@ alpline
 .*
 tests
 *-example.toml
+*-example.y*ml
 .golangci.yml
 *.md
 *.pc
