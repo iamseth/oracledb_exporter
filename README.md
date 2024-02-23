@@ -1,4 +1,4 @@
-![image](https://github.com/gdois/oracledb_exporter/assets/44671356/bf4190e5-8393-4541-b198-3aff2bf19485)![image](https://github.com/gdois/oracledb_exporter/assets/44671356/18da195e-c5a3-4e5d-bea4-a4bad8162ae5)# Oracle DB Exporter
+# Oracle DB Exporter
 
 [![Build Status](https://travis-ci.org/iamseth/oracledb_exporter.svg)](https://travis-ci.org/iamseth/oracledb_exporter)
 [![GoDoc](https://godoc.org/github.com/iamseth/oracledb_exporter?status.svg)](http://godoc.org/github.com/iamseth/oracledb_exporter)
