@@ -1,4 +1,4 @@
-# Oracle DB Exporter
+![image](https://github.com/gdois/oracledb_exporter/assets/44671356/bf4190e5-8393-4541-b198-3aff2bf19485)![image](https://github.com/gdois/oracledb_exporter/assets/44671356/18da195e-c5a3-4e5d-bea4-a4bad8162ae5)# Oracle DB Exporter
 
 [![Build Status](https://travis-ci.org/iamseth/oracledb_exporter.svg)](https://travis-ci.org/iamseth/oracledb_exporter)
 [![GoDoc](https://godoc.org/github.com/iamseth/oracledb_exporter?status.svg)](http://godoc.org/github.com/iamseth/oracledb_exporter)
@@ -60,20 +60,20 @@ docker pull ghcr.io/iamseth/oracledb_exporter:0.5.0
 And here a command to run it and forward the port:
 
 ```bash
-docker run -it --rm -p 9161:9161 ghcr.io/iamseth/oracledb_exporter:0.5.0
+docker run -it --rm -p 9161:8080 ghcr.io/iamseth/oracledb_exporter:0.5.0
 ```
 
 If you don't already have an Oracle server, you can run one locally in a container and then link the exporter to it.
 
 ```bash
 docker run -d --name oracle -p 1521:1521 wnameless/oracle-xe-11g-r2:18.04-apex
-docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=oracle://system:oracle@oracle:1521/xe ghcr.io/iamseth/oracledb_exporter:0.5.0
+docker run -d --name oracledb_exporter --link=oracle -p 9161:8080 -e DATA_SOURCE_NAME=oracle://system:oracle@oracle:1521/xe ghcr.io/iamseth/oracledb_exporter:0.5.0
 ```
 
 Since 0.2.1, the exporter image exist with Alpine flavor. Watch out for their use. It is for the moment a test.
 
 ```bash
-docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=oracle://system:oracle@oracle/xe iamseth/oracledb_exporter:alpine
+docker run -d --name oracledb_exporter --link=oracle -p 9161:8080 -e DATA_SOURCE_NAME=oracle://system:oracle@oracle/xe iamseth/oracledb_exporter:alpine
 ```
 
 ### Different Docker Images
@@ -506,7 +506,7 @@ version as they are embedded in the container.
 
 Here an example to run this exporter (to scrap metrics from system/oracle@//host:1521/service-or-sid) and bind the exporter port (9161) to the global machine:
 
-`docker run -it --rm -p 9161:9161 -e DATA_SOURCE_NAME=oracle://system/oracle@//host:1521/service-or-sid iamseth/oracledb_exporter:0.2.6a`
+`docker run -it --rm -p 9161:8080 -e DATA_SOURCE_NAME=oracle://system/oracle@//host:1521/service-or-sid iamseth/oracledb_exporter:0.2.6a`
 
 ### Error scraping for wait_time
 
