@@ -33,11 +33,11 @@ var (
 	).Default(getEnv("DATA_SOURCE_NAME", "")).String()
 	defaultFileMetrics = kingpin.Flag(
 		"default.metrics",
-		"File with default metrics in a TOML file. (env: DEFAULT_METRICS)",
+		"File with default metrics in a toml or yaml format. (env: DEFAULT_METRICS)",
 	).Default(getEnv("DEFAULT_METRICS", "default-metrics.toml")).String()
 	customMetrics = kingpin.Flag(
 		"custom.metrics",
-		"File that may contain various custom metrics in a TOML file. (env: CUSTOM_METRICS)",
+		"File that may contain various custom metrics in a toml or yaml format. (env: CUSTOM_METRICS)",
 	).Default(getEnv("CUSTOM_METRICS", "")).String()
 	queryTimeout = kingpin.Flag(
 		"query.timeout",

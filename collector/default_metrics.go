@@ -2,8 +2,7 @@ package collector
 
 import (
 	"errors"
-	"fmt"
-	"path/filepath"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/go-kit/log/level"
@@ -76,15 +75,22 @@ ORDER by tablespace
 // DefaultMetrics is a somewhat hacky way to load the default metrics
 func (e *Exporter) DefaultMetrics() Metrics {
 	var metricsToScrape Metrics
+	var err error
 	if e.config.DefaultMetricsFile != "" {
-		if _, err := toml.DecodeFile(filepath.Clean(e.config.DefaultMetricsFile), &metricsToScrape); err != nil {
-			level.Error(e.logger).Log(fmt.Sprintf("there was an issue while loading specified default metrics file at: "+e.config.DefaultMetricsFile+", proceeding to run with default metrics."), err)
+		if strings.HasSuffix(e.config.DefaultMetricsFile, "toml") {
+			err = loadTomlMetricsConfig(e.config.DefaultMetricsFile, &metricsToScrape)
+		} else {
+			err = loadYamlMetricsConfig(e.config.DefaultMetricsFile, &metricsToScrape)
 		}
-		return metricsToScrape
+		if err == nil {
+			return metricsToScrape
+		}
+		level.Error(e.logger).Log("defaultMetricsFile", e.config.DefaultMetricsFile, "msg", err)
+		level.Warn(e.logger).Log("msg", "proceeding to run with default metrics")
 	}
 
 	if _, err := toml.Decode(defaultMetricsConst, &metricsToScrape); err != nil {
-		level.Error(e.logger).Log(err)
+		level.Error(e.logger).Log("msg", err.Error())
 		panic(errors.New("Error while loading " + defaultMetricsConst))
 	}
 	return metricsToScrape

@@ -19,6 +19,7 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
+	"sigs.k8s.io/yaml"
 )
 
 // Exporter collects Oracle DB metrics. It implements prometheus.Collector.
@@ -73,7 +74,7 @@ type Metric struct {
 
 // Metrics is a container structure for prometheus metrics
 type Metrics struct {
-	Metric []Metric
+	Metric []Metric `json:"metrics"`
 }
 
 var (
@@ -281,22 +282,22 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 			defer wg.Done()
 
 			level.Debug(e.logger).Log("About to scrape metric: ")
-			level.Debug(e.logger).Log("- Metric MetricsDesc: ", metric.MetricsDesc)
+			level.Debug(e.logger).Log("- Metric MetricsDesc: ", fmt.Sprintf("%+v", metric.MetricsDesc))
 			level.Debug(e.logger).Log("- Metric Context: ", metric.Context)
-			level.Debug(e.logger).Log("- Metric MetricsType: ", metric.MetricsType)
-			level.Debug(e.logger).Log("- Metric MetricsBuckets: ", metric.MetricsBuckets, "(Ignored unless Histogram type)")
-			level.Debug(e.logger).Log("- Metric Labels: ", metric.Labels)
+			level.Debug(e.logger).Log("- Metric MetricsType: ", fmt.Sprintf("%+v", metric.MetricsType))
+			level.Debug(e.logger).Log("- Metric MetricsBuckets: ", fmt.Sprintf("%+v", metric.MetricsBuckets), "(Ignored unless Histogram type)")
+			level.Debug(e.logger).Log("- Metric Labels: ", fmt.Sprintf("%+v", metric.Labels))
 			level.Debug(e.logger).Log("- Metric FieldToAppend: ", metric.FieldToAppend)
-			level.Debug(e.logger).Log("- Metric IgnoreZeroResult: ", metric.IgnoreZeroResult)
+			level.Debug(e.logger).Log("- Metric IgnoreZeroResult: ", fmt.Sprintf("%+v", metric.IgnoreZeroResult))
 			level.Debug(e.logger).Log("- Metric Request: ", metric.Request)
 
 			if len(metric.Request) == 0 {
-				level.Error(e.logger).Log("Error scraping for ", metric.MetricsDesc, ". Did you forget to define request in your toml file?")
+				level.Error(e.logger).Log("Error scraping for ", metric.MetricsDesc, ". Did you forget to define request in your metrics config file?")
 				return
 			}
 
 			if len(metric.MetricsDesc) == 0 {
-				level.Error(e.logger).Log("Error scraping for query", metric.Request, ". Did you forget to define metricsdesc  in your toml file?")
+				level.Error(e.logger).Log("Error scraping for query", metric.Request, ". Did you forget to define metricsdesc in your metrics config file?")
 				return
 			}
 
@@ -312,7 +313,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 			scrapeStart := time.Now()
 			if err = e.ScrapeMetric(e.db, ch, metric); err != nil {
-				level.Error(e.logger).Log("error scraping for", metric.Context, "_", metric.MetricsDesc, time.Since(scrapeStart), ":", err.Error())
+				level.Error(e.logger).Log("scrapeMetricContext", metric.Context, "ScrapeDuration", time.Since(scrapeStart), "msg", err.Error())
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
 				level.Debug(e.logger).Log("successfully scraped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
@@ -383,17 +384,40 @@ func (e *Exporter) reloadMetrics() {
 	// If custom metrics, load it
 	if strings.Compare(e.config.CustomMetrics, "") != 0 {
 		for _, _customMetrics := range strings.Split(e.config.CustomMetrics, ",") {
-			if _, err := toml.DecodeFile(_customMetrics, &additionalMetrics); err != nil {
-				level.Error(e.logger).Log(err)
-				panic(errors.New("Error while loading " + _customMetrics))
+			if strings.HasSuffix(_customMetrics, "toml") {
+				if err := loadTomlMetricsConfig(_customMetrics, &additionalMetrics); err != nil {
+					panic(err)
+				}
 			} else {
-				level.Info(e.logger).Log("Successfully loaded custom metrics from: " + _customMetrics)
+				if err := loadYamlMetricsConfig(_customMetrics, &additionalMetrics); err != nil {
+					panic(err)
+				}
 			}
+			level.Info(e.logger).Log("event", "Successfully loaded custom metrics from "+_customMetrics)
+			level.Debug(e.logger).Log("custom metrics parsed content", fmt.Sprintf("%+v", additionalMetrics))
 			e.metricsToScrape.Metric = append(e.metricsToScrape.Metric, additionalMetrics.Metric...)
 		}
 	} else {
 		level.Debug(e.logger).Log("No custom metrics defined.")
 	}
+}
+
+func loadYamlMetricsConfig(_metricsFileName string, metrics *Metrics) error {
+	yamlBytes, err := os.ReadFile(_metricsFileName)
+	if err != nil {
+		return fmt.Errorf("cannot read the metrics config %s: %w", _metricsFileName, err)
+	}
+	if err := yaml.Unmarshal(yamlBytes, metrics); err != nil {
+		return fmt.Errorf("cannot unmarshal the metrics config %s: %w", _metricsFileName, err)
+	}
+	return nil
+}
+
+func loadTomlMetricsConfig(_customMetrics string, metrics *Metrics) error {
+	if _, err := toml.DecodeFile(_customMetrics, metrics); err != nil {
+		return fmt.Errorf("cannot read the metrics config %s: %w", _customMetrics, err)
+	}
+	return nil
 }
 
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
@@ -420,8 +444,7 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 			value, err := strconv.ParseFloat(strings.TrimSpace(row[metric]), 64)
 			// If not a float, skip current metric
 			if err != nil {
-				level.Error(e.logger).Log("Unable to convert current value to float (metric=" + metric +
-					",metricHelp=" + metricHelp + ",value=<" + row[metric] + ">)")
+				level.Error(e.logger).Log("msg", "Unable to convert current value to float", "metric", metric, "metricHelp", metricHelp, "value", row[metric])
 				continue
 			}
 			level.Debug(e.logger).Log("Query result looks like: ", value)
@@ -576,6 +599,7 @@ func getMetricType(metricType string, metricsType map[string]string) prometheus.
 
 func cleanName(s string) string {
 	s = strings.ReplaceAll(s, " ", "_") // Remove spaces
+	s = strings.ReplaceAll(s, "-", "_") // Remove hyphens
 	s = strings.ReplaceAll(s, "(", "")  // Remove open parenthesis
 	s = strings.ReplaceAll(s, ")", "")  // Remove close parenthesis
 	s = strings.ReplaceAll(s, "/", "")  // Remove forward slashes

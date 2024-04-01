@@ -3,8 +3,8 @@
 The exporter itself is dumb and does not do much. The initialization is done as follows:
 
 - Parse flags options
-- Load the default toml file (default-metrics.toml) and store each metrics in a Metric struct
-- Load the custom toml file (if a custom toml file is given)
+- Load the default metrics definition file (both [toml](default-metrics.toml) and [yaml](default-metrics.yaml) are supported) and store each metrics in a Metric struct
+- Load the custom metrics definition file, if given
 - Create an Exporter object
 - Register exporter in prometheus library
 - Launching a web server to handle incoming requests
