@@ -218,6 +218,8 @@ Usage of oracledb_exporter:
         Number of maximum idle connections in the connection pool. (default "0")
   --database.maxOpenConns string
         Number of maximum open connections in the connection pool. (default "10")
+  --database.dsn string
+        Connection string to a data source. (default "env: DATA_SOURCE_NAME")
   --web.config.file
         Path to configuration file that can enable TLS or authentication.
 ```
