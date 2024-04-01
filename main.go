@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"net/http"
 	"os"
 
@@ -86,7 +87,7 @@ func main() {
 	}
 
 	prometheus.MustRegister(exporter)
-	prometheus.MustRegister(version.NewCollector("oracledb_exporter"))
+	prometheus.MustRegister(collectors.NewBuildInfoCollector())
 
 	level.Info(logger).Log("msg", "Starting oracledb_exporter", "version", version.Info())
 	level.Info(logger).Log("msg", "Build context", "build", version.BuildContext())

@@ -23,9 +23,9 @@ IMAGE_ID       ?= $(IMAGE_NAME):$(VERSION)
 IMAGE_ID_LATEST?= $(IMAGE_NAME):latest
 RELEASE        ?= true
 
-UBUNTU_BASE_IMAGE       ?= docker.io/library/ubuntu:23.04
-ORACLE_LINUX_BASE_IMAGE ?= docker.io/library/oraclelinux:8-slim
-ALPINE_BASE_IMAGE       ?= docker.io/library/alpine:3.17
+UBUNTU_BASE_IMAGE       ?= docker.io/library/ubuntu:24.04
+ORACLE_LINUX_BASE_IMAGE ?= docker.io/library/oraclelinux:9-slim
+ALPINE_BASE_IMAGE       ?= docker.io/library/alpine:3.19
 
 ifeq ($(GOOS), windows)
 EXT?=.exe
