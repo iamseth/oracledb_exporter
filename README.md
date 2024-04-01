@@ -335,7 +335,7 @@ You can find [here](./custom-metrics-example/custom-metrics.toml) a working exam
 
 yaml format has the same as the above requirements regarding optional and mandatory fields and their meaning, but needs a root element `metric`:
 ```yaml
-metric:
+metrics:
 - context: "context_with_labels"
   labels: [label_1,label_2]
   metricsdesc:
