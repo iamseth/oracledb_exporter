@@ -1,6 +1,6 @@
 ARG BASE_IMAGE
 # Build is starting here
-FROM docker.io/library/golang:1.19 AS build
+FROM docker.io/library/golang:1.22 AS build
 
 WORKDIR /go/src/oracledb_exporter
 COPY . .
