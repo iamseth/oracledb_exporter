@@ -223,6 +223,8 @@ Usage of oracledb_exporter:
         Number of maximum open connections in the connection pool. (default "10")
   --database.dsn string
         Connection string to a data source. (default "env: DATA_SOURCE_NAME")
+  --database.dsnFile string
+        File to read a string to a data source from. (default "env: DATA_SOURCE_NAME_FILE")        
   --web.config.file
         Path to configuration file that can enable TLS or authentication.
   --query.timeout
