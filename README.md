@@ -85,6 +85,7 @@ Different Linux Distros:
 - `x.y.z` - Ubuntu Linux image
 - `x.y.z-oraclelinux` - Oracle Enterprise Linux image
 - `x.y.z-Alpine` - Alpine Linux image
+- `x.y.z-scratch` - Scratch image
 
 Forked Version:
 All the above docker images have a duplicate image tag ending in
@@ -449,6 +450,10 @@ You can also build only Ubuntu image:
 Or Alpine:
 
     make alpine-image
+
+Or Scratch:
+
+    make scratch-image
 
 ### Building Binaries
 
