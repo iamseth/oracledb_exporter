@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.19.0
 	github.com/prometheus/common v0.52.3
 	github.com/prometheus/exporter-toolkit v0.11.0
-	github.com/sijms/go-ora/v2 v2.8.11
+	github.com/sijms/go-ora/v2 v2.8.12
 	sigs.k8s.io/yaml v1.4.0
 )
 
