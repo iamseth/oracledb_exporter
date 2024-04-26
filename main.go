@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"net/http"
 	"os"
+
+	"github.com/prometheus/client_golang/prometheus/collectors"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -32,6 +33,9 @@ var (
 	dsn        = kingpin.Flag("database.dsn",
 		"Connection string to a data source. (env: DATA_SOURCE_NAME)",
 	).Default(getEnv("DATA_SOURCE_NAME", "")).String()
+	dsnFile = kingpin.Flag("database.dsnFile",
+		"File to read a string to a data source from. (env: DATA_SOURCE_NAME_FILE)",
+	).Default(getEnv("DATA_SOURCE_NAME_FILE", "")).String()
 	defaultFileMetrics = kingpin.Flag(
 		"default.metrics",
 		"File with default metrics in a toml or yaml format. (env: DEFAULT_METRICS)",
@@ -66,6 +70,15 @@ func main() {
 	kingpin.Version(version.Print("oracledb_exporter"))
 	kingpin.Parse()
 	logger := promlog.New(promLogConfig)
+
+	if dsnFile != nil && *dsnFile != "" {
+		dsnFileContent, err := os.ReadFile(*dsnFile)
+		if err != nil {
+			level.Error(logger).Log("msg", "Unable to read DATA_SOURCE_NAME_FILE", "file", dsnFile, "error", err)
+			os.Exit(1)
+		}
+		*dsn = string(dsnFileContent)
+	}
 
 	config := &collector.Config{
 		DSN:                *dsn,
