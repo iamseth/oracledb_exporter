@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -325,6 +326,11 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 }
 
 func (e *Exporter) connect() error {
+	_, err := url.Parse(e.dsn)
+	if err != nil {
+		level.Error(e.logger).Log("malformed DSN", maskDsn(e.dsn))
+		return err
+	}
 	level.Debug(e.logger).Log("launching connection: ", maskDsn(e.dsn))
 	db, err := sql.Open("oracle", e.dsn)
 	if err != nil {
