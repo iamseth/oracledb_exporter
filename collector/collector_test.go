@@ -23,5 +23,5 @@ func TestMalformedDSNMasksUserPassword(t *testing.T) {
 	}
 	err := e.connect()
 	assert.NotNil(t, err)
-	assert.Contains(t, buf.String(), "malformedDSN=***@")
+	assert.Contains(t, buf.String(), "malformedDSN:=***@")
 }
