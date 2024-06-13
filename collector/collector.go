@@ -493,7 +493,7 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 				desc := prometheus.NewDesc(
 					prometheus.BuildFQName(namespace, context, cleanName(row[fieldToAppend])),
 					metricHelp,
-					nil, nil,
+					labels, nil,
 				)
 				if metricsType[strings.ToLower(metric)] == "histogram" {
 					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
@@ -518,9 +518,9 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 						}
 						buckets[lelimit] = counter
 					}
-					ch <- prometheus.MustNewConstHistogram(desc, count, value, buckets)
+					ch <- prometheus.MustNewConstHistogram(desc, count, value, buckets, labelsValues...)
 				} else {
-					ch <- prometheus.MustNewConstMetric(desc, getMetricType(metric, metricsType), value)
+					ch <- prometheus.MustNewConstMetric(desc, getMetricType(metric, metricsType), value, labelsValues...)
 				}
 			}
 			metricsCount++
