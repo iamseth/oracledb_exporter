@@ -241,6 +241,8 @@ func (e *Exporter) scheduledScrape() {
 func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	e.totalScrapes.Inc()
 	var err error
+	var errmutex sync.Mutex
+
 	defer func(begun time.Time) {
 		e.duration.Set(time.Since(begun).Seconds())
 		if err == nil {
@@ -313,8 +315,13 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 			}
 
 			scrapeStart := time.Now()
-			if err = e.ScrapeMetric(e.db, ch, metric); err != nil {
-				level.Error(e.logger).Log("scrapeMetricContext", metric.Context, "ScrapeDuration", time.Since(scrapeStart), "msg", err.Error())
+			if err1 := e.ScrapeMetric(e.db, ch, metric); err1 != nil {
+				errmutex.Lock()
+				{
+					err = err1
+				}
+				errmutex.Unlock()
+				level.Error(e.logger).Log("scrapeMetricContext", metric.Context, "ScrapeDuration", time.Since(scrapeStart), "msg", err1.Error())
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
 				level.Debug(e.logger).Log("successfully scraped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
