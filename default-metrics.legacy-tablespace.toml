@@ -45,14 +45,14 @@ WHERE
 [[metric]]
 context = "tablespace"
 labels = [ "tablespace", "type" ]
-metricsdesc = { bytes = "Generic counter metric of tablespaces bytes in Oracle.", max_bytes = "Generic counter metric of tablespaces max bytes in Oracle.", free = "Generic counter metric of tablespaces free bytes in Oracle." }
+metricsdesc = { bytes = "Generic counter metric of tablespaces bytes in Oracle.", max_bytes = "Generic counter metric of tablespaces max bytes in Oracle.", free_bytes = "Generic counter metric of tablespaces free bytes in Oracle." }
 request = '''
 SELECT
   df.tablespace_name       as tablespace,
   df.type                  as type,
   nvl(sum(df.bytes),0)     as bytes,
   nvl(sum(df.max_bytes),0) as max_bytes,
-  nvl(sum(f.free),0)       as free
+  nvl(sum(f.free),0)       as free_bytes
 FROM
   (
     SELECT
@@ -69,7 +69,7 @@ FROM
   ) df,
   (
     SELECT
-      TRUNC(SUM(bytes)) AS free,
+      TRUNC(SUM(bytes)) AS free_bytes,
       file_id
     FROM dba_free_space
     GROUP BY file_id
@@ -82,7 +82,7 @@ SELECT
   Y.type                   as type,
   SUM(Y.bytes)             as bytes,
   SUM(Y.max_bytes)         as max_bytes,
-  MAX(nvl(Y.free_bytes,0)) as free
+  MAX(nvl(Y.free_bytes,0)) as free_bytes
 FROM
   (
     SELECT
