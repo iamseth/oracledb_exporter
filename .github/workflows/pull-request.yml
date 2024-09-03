@@ -151,7 +151,7 @@ jobs:
         run: echo "version=${{ needs.build.outputs.version }}-rc.pr-${{ env.PULL_REQUEST_NUMBER }}-${{ github.run_number }}" >> $GITHUB_OUTPUT
 
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: application
           path: "."
