@@ -41,7 +41,7 @@ The following metrics are exposed currently.
 - oracledb_wait_time_user_io
 - oracledb_tablespace_bytes
 - oracledb_tablespace_max_bytes
-- oracledb_tablespace_free
+- oracledb_tablespace_free_bytes
 - oracledb_tablespace_used_percent
 - oracledb_process_count
 - oracledb_resource_current_utilization
