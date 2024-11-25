@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/common v0.60.0
 	github.com/prometheus/exporter-toolkit v0.13.0
 	github.com/sijms/go-ora/v2 v2.8.22
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
