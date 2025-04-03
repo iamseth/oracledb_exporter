@@ -122,13 +122,13 @@ jobs:
           mv dist/*.tar.gz application.tar.gz
 
       - name: Upload build output
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.5.0
         with:
           name: application
           path: "./application.tar.gz"
 
       - name: Upload test coverage
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.5.0
         with:
           name: test-coverage
           path: "./test-coverage.out"
@@ -151,7 +151,7 @@ jobs:
         run: echo "version=${{ needs.build.outputs.version }}-rc.pr-${{ env.PULL_REQUEST_NUMBER }}-${{ github.run_number }}" >> $GITHUB_OUTPUT
 
       - name: Download artifact
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v4.1.8
         with:
           name: application
           path: "."
@@ -180,7 +180,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix: ${{ fromJson(needs.config.outputs.deploy-pre-release-matrix) }}
-    if: ${{ !failure() && needs.release.result == 'success' && needs.config.outputs.deploy-pull-request == 'true' }}
+    if: ${{ !failure() && needs.release.result == 'success' && needs.config.outputs.deploy-pull-request == 'true' && env.FORKED == 'false' }}
     needs:
       - config
       - build
@@ -196,6 +196,7 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u $ --password-stdin
 
       - name: Build image
+        if: ${{ env.FORKED == 'false' }}
         id: docker-meta
         env:
           VERSION: "${{ needs.release.outputs.version }}"

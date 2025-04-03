@@ -15,10 +15,8 @@ import (
 	_ "github.com/sijms/go-ora/v2"
 
 	kingpin "github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus/common/promlog"
-	"github.com/prometheus/common/promlog/flag"
-
-	"github.com/go-kit/log/level"
+	"github.com/prometheus/common/promslog"
+	"github.com/prometheus/common/promslog/flag"
 
 	// Required for debugging
 	// _ "net/http/pprof"
@@ -64,17 +62,17 @@ var (
 )
 
 func main() {
-	promLogConfig := &promlog.Config{}
+	promLogConfig := &promslog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promLogConfig)
 	kingpin.HelpFlag.Short('\n')
 	kingpin.Version(version.Print("oracledb_exporter"))
 	kingpin.Parse()
-	logger := promlog.New(promLogConfig)
+	logger := promslog.New(promLogConfig)
 
 	if dsnFile != nil && *dsnFile != "" {
 		dsnFileContent, err := os.ReadFile(*dsnFile)
 		if err != nil {
-			level.Error(logger).Log("msg", "Unable to read DATA_SOURCE_NAME_FILE", "file", dsnFile, "error", err)
+			logger.Error("unable to read DATA_SOURCE_NAME_FILE", "file", dsnFile, "error", err)
 			os.Exit(1)
 		}
 		*dsn = string(dsnFileContent)
@@ -90,7 +88,7 @@ func main() {
 	}
 	exporter, err := collector.NewExporter(logger, config)
 	if err != nil {
-		level.Error(logger).Log("unable to connect to DB", err)
+		logger.Error("unable to connect to DB", "err", err.Error())
 	}
 
 	if *scrapeInterval != 0 {
@@ -102,9 +100,9 @@ func main() {
 	prometheus.MustRegister(exporter)
 	prometheus.MustRegister(collectors.NewBuildInfoCollector())
 
-	level.Info(logger).Log("msg", "Starting oracledb_exporter", "version", version.Info())
-	level.Info(logger).Log("msg", "Build context", "build", version.BuildContext())
-	level.Info(logger).Log("msg", "Collect from: ", "metricPath", *metricPath)
+	logger.Info("Starting oracledb_exporter", "version", version.Info())
+	logger.Info("Build context", "build", version.BuildContext())
+	logger.Info("Collect from:", "metricPath", *metricPath)
 
 	opts := promhttp.HandlerOpts{
 		ErrorHandling: promhttp.ContinueOnError,
@@ -116,7 +114,7 @@ func main() {
 
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {
-		level.Error(logger).Log("msg", "Listening error", "reason", err)
+		logger.Error("ListenAndServe", "err", err.Error())
 		os.Exit(1)
 	}
 }

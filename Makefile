@@ -9,7 +9,7 @@ GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
 BUILD_ARGS      = --build-arg VERSION=$(VERSION)
 LEGACY_TABLESPACE = --build-arg LEGACY_TABLESPACE=.legacy-tablespace
 OUTDIR          = ./dist
-LINTER_VERSION ?= v1.55.2
+LINTER_VERSION ?= v1.62.2
 LINTER_IMAGE   ?= docker.io/golangci/golangci-lint:$(LINTER_VERSION)
 
 ifeq ($(shell command -v podman 2> /dev/null),)

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"log/slog"
 	"net/url"
 	"os"
 	"strconv"
@@ -17,8 +18,6 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/yaml"
 )
@@ -36,7 +35,7 @@ type Exporter struct {
 	scrapeResults   []prometheus.Metric
 	up              prometheus.Gauge
 	db              *sql.DB
-	logger          log.Logger
+	logger          *slog.Logger
 }
 
 // Config is the configuration of the exporter
@@ -85,6 +84,14 @@ var (
 	exporterName      = "exporter"
 )
 
+func getMapKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 func maskDsn(dsn string) string {
 	parts := strings.Split(dsn, "@")
 	if len(parts) > 1 {
@@ -95,7 +102,7 @@ func maskDsn(dsn string) string {
 }
 
 // NewExporter creates a new Exporter instance
-func NewExporter(logger log.Logger, cfg *Config) (*Exporter, error) {
+func NewExporter(logger *slog.Logger, cfg *Config) (*Exporter, error) {
 	e := &Exporter{
 		mu:  &sync.Mutex{},
 		dsn: cfg.DSN,
@@ -254,21 +261,21 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 	if err = e.db.Ping(); err != nil {
 		if strings.Contains(err.Error(), "sql: database is closed") {
-			level.Info(e.logger).Log("Reconnecting to DB")
+			e.logger.Info("Reconnecting to DB")
 			err = e.connect()
 			if err != nil {
-				level.Error(e.logger).Log("error reconnecting to DB", err.Error())
+				e.logger.Error("failed reconnect Oracle DB", "err", err.Error())
 			}
 		}
 	}
 
 	if err = e.db.Ping(); err != nil {
-		level.Error(e.logger).Log("error pinging oracle:", err.Error())
+		e.logger.Error("failed ping Oracle DB", "err", err.Error())
 		e.up.Set(0)
 		return
 	}
 
-	level.Debug(e.logger).Log("Successfully pinged Oracle database: ", maskDsn(e.dsn))
+	e.logger.Debug("Succesful ping Oracle DB", "connstring", maskDsn(e.dsn))
 	e.up.Set(1)
 
 	if e.checkIfMetricsChanged() {
@@ -284,23 +291,20 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		f := func() {
 			defer wg.Done()
 
-			level.Debug(e.logger).Log("About to scrape metric: ")
-			level.Debug(e.logger).Log("- Metric MetricsDesc: ", fmt.Sprintf("%+v", metric.MetricsDesc))
-			level.Debug(e.logger).Log("- Metric Context: ", metric.Context)
-			level.Debug(e.logger).Log("- Metric MetricsType: ", fmt.Sprintf("%+v", metric.MetricsType))
-			level.Debug(e.logger).Log("- Metric MetricsBuckets: ", fmt.Sprintf("%+v", metric.MetricsBuckets), "(Ignored unless Histogram type)")
-			level.Debug(e.logger).Log("- Metric Labels: ", fmt.Sprintf("%+v", metric.Labels))
-			level.Debug(e.logger).Log("- Metric FieldToAppend: ", metric.FieldToAppend)
-			level.Debug(e.logger).Log("- Metric IgnoreZeroResult: ", fmt.Sprintf("%+v", metric.IgnoreZeroResult))
-			level.Debug(e.logger).Log("- Metric Request: ", metric.Request)
+			metricNames := strings.Join(getMapKeys(metric.MetricsDesc), ",")
+			e.logger.Debug("Scraping metrics",
+				"subsystem", metric.Context, "metricsArray", metricNames,
+				"metricstype", metric.MetricsType, "metricbuckets", metric.MetricsBuckets,
+				"labels", fmt.Sprintf("%+v", metric.Labels), "fieldToAppend", metric.FieldToAppend,
+				"ignorezeroresult", metric.IgnoreZeroResult, "query", metric.Request)
 
 			if len(metric.Request) == 0 {
-				level.Error(e.logger).Log("Error scraping for ", metric.MetricsDesc, ". Did you forget to define request in your metrics config file?")
+				e.logger.Error("metrics request is empty. Did you forget to define request in your metrics config file?", "subsystem", metric.Context, "metricsArray", metricNames)
 				return
 			}
 
 			if len(metric.MetricsDesc) == 0 {
-				level.Error(e.logger).Log("Error scraping for query", metric.Request, ". Did you forget to define metricsdesc in your metrics config file?")
+				e.logger.Error("Metric help is empty. Did you forget to define metricsdesc in your metrics config file?", "subsystem", metric.Context, "query", metric.Request)
 				return
 			}
 
@@ -308,7 +312,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 				if metricType == "histogram" {
 					_, ok := metric.MetricsBuckets[column]
 					if !ok {
-						level.Error(e.logger).Log("Unable to find MetricsBuckets configuration key for metric. (metric=" + column + ")")
+						e.logger.Error("Unable to find MetricsBuckets configuration key for metric. (metric=" + column + ")")
 						return
 					}
 				}
@@ -321,10 +325,10 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 					err = err1
 				}
 				errmutex.Unlock()
-				level.Error(e.logger).Log("scrapeMetricContext", metric.Context, "ScrapeDuration", time.Since(scrapeStart), "msg", err1.Error())
+				e.logger.Error("scrape metric failed", "subsystem", metric.Context, "metricsArray", metricNames, "duration", time.Since(scrapeStart), "err", err1.Error())
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
-				level.Debug(e.logger).Log("successfully scraped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
+				e.logger.Debug("successfully scraped metric", "subsystem", metric.Context, "metricsArray", metricNames, "duration", time.Since(scrapeStart))
 			}
 		}
 		go f()
@@ -335,20 +339,21 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 func (e *Exporter) connect() error {
 	_, err := url.Parse(e.dsn)
 	if err != nil {
-		level.Error(e.logger).Log("malformed DSN: ", maskDsn(e.dsn))
+		e.logger.Error("malformed DSN", "value", maskDsn(e.dsn))
 		return err
 	}
-	level.Debug(e.logger).Log("launching connection: ", maskDsn(e.dsn))
+	e.logger.Debug("launching connection: ", "connstring", maskDsn(e.dsn))
 	db, err := sql.Open("oracle", e.dsn)
 	if err != nil {
-		level.Error(e.logger).Log("error while connecting to", e.dsn)
+		e.logger.Error("failed to connect", "connstring", maskDsn(e.dsn))
 		return err
 	}
-	level.Debug(e.logger).Log("set max idle connections to ", e.config.MaxIdleConns)
+	e.logger.Debug("config", "DATABASE_MAXIDLECONNS", e.config.MaxIdleConns)
+	e.logger.Debug("config", "DATABASE_MAXOPENCONNS", e.config.MaxOpenConns)
+	e.logger.Debug("config", "QUERY_TIMEOUT", e.config.QueryTimeout)
 	db.SetMaxIdleConns(e.config.MaxIdleConns)
-	level.Debug(e.logger).Log("set max open connections to ", e.config.MaxOpenConns)
 	db.SetMaxOpenConns(e.config.MaxOpenConns)
-	level.Debug(e.logger).Log("successfully connected to: ", maskDsn(e.dsn))
+	e.logger.Debug("successfully connected", "connstring", maskDsn(e.dsn))
 	e.db = db
 	return nil
 }
@@ -358,15 +363,15 @@ func (e *Exporter) checkIfMetricsChanged() bool {
 		if len(_customMetrics) == 0 {
 			continue
 		}
-		level.Debug(e.logger).Log("checking modifications in following metrics definition file:", _customMetrics)
+		e.logger.Debug("checking metrics definition file has changed", "file", _customMetrics)
 		h := sha256.New()
 		if err := hashFile(h, _customMetrics); err != nil {
-			level.Error(e.logger).Log("unable to get file hash", err.Error())
+			e.logger.Error("unable to get file hash", "file", _customMetrics, "err", err.Error())
 			return false
 		}
 		// If any of files has been changed reload metrics
 		if !bytes.Equal(hashMap[i], h.Sum(nil)) {
-			level.Info(e.logger).Log(_customMetrics, "has been changed. Reloading metrics...")
+			e.logger.Info("metrics definition has been changed. Reloading metrics...", "file", _customMetrics)
 			hashMap[i] = h.Sum(nil)
 			return true
 		}
@@ -406,12 +411,13 @@ func (e *Exporter) reloadMetrics() {
 					panic(err)
 				}
 			}
-			level.Info(e.logger).Log("event", "Successfully loaded custom metrics from "+_customMetrics)
-			level.Debug(e.logger).Log("custom metrics parsed content", fmt.Sprintf("%+v", additionalMetrics))
+			e.logger.Info("successfully loaded custom metrics from", "file", _customMetrics)
+			e.logger.Debug("custom metrics parsed content", "value", fmt.Sprintf("%+v", additionalMetrics))
+
 			e.metricsToScrape.Metric = append(e.metricsToScrape.Metric, additionalMetrics.Metric...)
 		}
 	} else {
-		level.Debug(e.logger).Log("No custom metrics defined.")
+		e.logger.Debug("No custom metrics defined.")
 	}
 }
 
@@ -435,7 +441,7 @@ func loadTomlMetricsConfig(_customMetrics string, metrics *Metrics) error {
 
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
 func (e *Exporter) ScrapeMetric(db *sql.DB, ch chan<- prometheus.Metric, metricDefinition Metric) error {
-	level.Debug(e.logger).Log("calling function ScrapeGenericValues()")
+	e.logger.Debug("calling function ScrapeGenericValues()")
 	return e.scrapeGenericValues(db, ch, metricDefinition.Context, metricDefinition.Labels,
 		metricDefinition.MetricsDesc, metricDefinition.MetricsType, metricDefinition.MetricsBuckets,
 		metricDefinition.FieldToAppend, metricDefinition.IgnoreZeroResult,
@@ -457,10 +463,10 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 			value, err := strconv.ParseFloat(strings.TrimSpace(row[metric]), 64)
 			// If not a float, skip current metric
 			if err != nil {
-				level.Error(e.logger).Log("msg", "Unable to convert current value to float", "metric", metric, "metricHelp", metricHelp, "value", row[metric])
+				e.logger.Error("convert to float", "metric", metric, "msg", fmt.Sprintf("Skipping due to error %s", err.Error()), "value", row[metric])
 				continue
 			}
-			level.Debug(e.logger).Log("Query result looks like: ", value)
+			e.logger.Debug("Query result looks like: ", "value", value)
 			// If metric do not use a field content in metric's name
 			if strings.Compare(fieldToAppend, "") == 0 {
 				desc := prometheus.NewDesc(
@@ -471,7 +477,7 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 				if metricsType[strings.ToLower(metric)] == "histogram" {
 					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
 					if err != nil {
-						level.Error(e.logger).Log("Unable to convert count value to int (metric=" + metric +
+						e.logger.Error("Unable to convert count value to int (metric=" + metric +
 							",metricHelp=" + metricHelp + ",value=<" + row["count"] + ">)")
 						continue
 					}
@@ -479,13 +485,13 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 					for field, le := range metricsBuckets[metric] {
 						lelimit, err := strconv.ParseFloat(strings.TrimSpace(le), 64)
 						if err != nil {
-							level.Error(e.logger).Log("Unable to convert bucket limit value to float (metric=" + metric +
+							e.logger.Error("Unable to convert bucket limit value to float (metric=" + metric +
 								",metricHelp=" + metricHelp + ",bucketlimit=<" + le + ">)")
 							continue
 						}
 						counter, err := strconv.ParseUint(strings.TrimSpace(row[field]), 10, 64)
 						if err != nil {
-							level.Error(e.logger).Log("Unable to convert ", field, " value to int (metric="+metric+
+							e.logger.Error("Unable to convert ", field, " value to int (metric="+metric+
 								",metricHelp="+metricHelp+",value=<"+row[field]+">)")
 							continue
 						}
@@ -505,7 +511,7 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 				if metricsType[strings.ToLower(metric)] == "histogram" {
 					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
 					if err != nil {
-						level.Error(e.logger).Log("Unable to convert count value to int (metric=" + metric +
+						e.logger.Error("Unable to convert count value to int (metric=" + metric +
 							",metricHelp=" + metricHelp + ",value=<" + row["count"] + ">)")
 						continue
 					}
@@ -513,13 +519,13 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 					for field, le := range metricsBuckets[metric] {
 						lelimit, err := strconv.ParseFloat(strings.TrimSpace(le), 64)
 						if err != nil {
-							level.Error(e.logger).Log("Unable to convert bucket limit value to float (metric=" + metric +
+							e.logger.Error("Unable to convert bucket limit value to float (metric=" + metric +
 								",metricHelp=" + metricHelp + ",bucketlimit=<" + le + ">)")
 							continue
 						}
 						counter, err := strconv.ParseUint(strings.TrimSpace(row[field]), 10, 64)
 						if err != nil {
-							level.Error(e.logger).Log("Unable to convert ", field, " value to int (metric="+metric+
+							e.logger.Error("Unable to convert ", field, " value to int (metric="+metric+
 								",metricHelp="+metricHelp+",value=<"+row[field]+">)")
 							continue
 						}
@@ -534,14 +540,15 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 		}
 		return nil
 	}
-	level.Debug(e.logger).Log("Calling function GeneratePrometheusMetrics()")
+	e.logger.Debug("Calling function GeneratePrometheusMetrics()")
 	err := e.generatePrometheusMetrics(db, genericParser, request)
-	level.Debug(e.logger).Log("ScrapeGenericValues() - metricsCount: ", metricsCount)
+	metricNames := strings.Join(getMapKeys(metricsDesc), ",")
+	e.logger.Debug("scrapeGenericValues", "subsystem", context, "metricsArray", metricNames, "metricsCount", metricsCount)
 	if err != nil {
 		return err
 	}
 	if !ignoreZeroResult && metricsCount == 0 {
-		return errors.New("No metrics found while parsing")
+		return errors.New("no metrics found while parsing")
 	}
 	return err
 }
@@ -557,6 +564,9 @@ func (e *Exporter) generatePrometheusMetrics(db *sql.DB, parse func(row map[stri
 		return errors.New("oracle query timed out")
 	}
 
+	if ctx.Err() != nil {
+		e.logger.Error("ctxError", "err", ctx.Err())
+	}
 	if err != nil {
 		return err
 	}
@@ -622,9 +632,9 @@ func cleanName(s string) string {
 }
 
 func (e *Exporter) logError(s string) {
-	_ = level.Error(e.logger).Log(s)
+	e.logger.Error(s)
 }
 
 func (e *Exporter) logDebug(s string) {
-	_ = level.Debug(e.logger).Log(s)
+	e.logger.Debug(s)
 }

@@ -6,3 +6,4 @@ dist/
 *.key
 oci8.pc
 *.skip
+test-coverage.out
